@@ -1,0 +1,348 @@
+=====================================================
+LPG TANK MANAGEMENT SYSTEM - SETUP INSTRUCTIONS
+=====================================================
+
+OVERVIEW:
+This is a secure, enterprise-grade web application for managing LPG tank readings with:
+- SSL/TLS encrypted authentication
+- Multi-site support for customers
+- Excel export & email automation
+- Admin panel for user management
+- Driver portal with telemetry data
+- Customer data import
+- Modern dark theme UI
+
+=====================================================
+STEP 1: INSTALL NODE.JS
+=====================================================
+
+1. Download Node.js (LTS version recommended):
+   https://nodejs.org/
+
+2. Install Node.js with default settings
+
+3. Verify installation by opening PowerShell and running:
+   node --version
+   npm --version
+
+   Both should display version numbers
+
+=====================================================
+STEP 2: INSTALL DEPENDENCIES
+=====================================================
+
+1. Open PowerShell in the project directory:
+   cd c:\Users\reidb\qoder\lpg-tank-management
+
+2. Install all dependencies:
+   npm install
+
+   This will install:
+   - Next.js (React framework)
+   - Prisma (Database ORM)
+   - NextAuth (Authentication)
+   - ExcelJS (Excel generation)
+   - Nodemailer (Email service)
+   - Tailwind CSS (Styling)
+   - And other required packages
+
+=====================================================
+STEP 3: DATABASE SETUP
+=====================================================
+
+Option A: PostgreSQL (Recommended for Production)
+---------------------------------------------------
+1. Install PostgreSQL:
+   https://www.postgresql.org/download/windows/
+
+2. Create a database:
+   - Open pgAdmin
+   - Create new database: lpg_tank_db
+   - Note your username and password
+
+3. Update DATABASE_URL in .env file
+
+Option B: SQLite (Quick Setup for Testing)
+-------------------------------------------
+1. Change in prisma/schema.prisma:
+   datasource db {
+     provider = "sqlite"
+     url      = "file:./dev.db"
+   }
+
+=====================================================
+STEP 4: ENVIRONMENT CONFIGURATION
+=====================================================
+
+1. Copy .env.example to .env:
+   cp .env.example .env
+
+2. Edit .env file and configure:
+
+   # Database (PostgreSQL example)
+   DATABASE_URL="postgresql://username:password@localhost:5432/lpg_tank_db"
+
+   # NextAuth - Generate secret:
+   # Run: openssl rand -base64 32
+   NEXTAUTH_URL="http://localhost:3000"
+   NEXTAUTH_SECRET="your-generated-secret-here"
+
+   # Email Configuration (Gmail example)
+   SMTP_HOST="smtp.gmail.com"
+   SMTP_PORT="587"
+   SMTP_USER="your-email@gmail.com"
+   SMTP_PASSWORD="your-app-password"
+   EMAIL_FROM="noreply@yourdomain.com"
+   EMAIL_TO="vic@elgas.com.au"
+
+   # Encryption Key - Generate:
+   # Run: openssl rand -hex 32
+   ENCRYPTION_KEY="your-generated-encryption-key"
+
+   # For Gmail: Use App Password (not regular password)
+   # Enable 2FA, then create App Password:
+   # https://myaccount.google.com/apppasswords
+
+=====================================================
+STEP 5: DATABASE MIGRATION
+=====================================================
+
+1. Initialize Prisma:
+   npx prisma generate
+
+2. Create database tables:
+   npx prisma db push
+
+3. (Optional) Open Prisma Studio to view database:
+   npx prisma studio
+
+=====================================================
+STEP 6: CREATE ADMIN USER
+=====================================================
+
+Create a seed script or manually add admin user:
+
+1. Create file: prisma/seed.ts
+
+2. Run seed script:
+   npx prisma db seed
+
+OR manually using Prisma Studio:
+- Open: npx prisma studio
+- Go to User table
+- Add new user:
+  - email: admin@example.com
+  - password: (will be hashed - see note below)
+  - name: Admin User
+  - role: ADMIN
+  - active: true
+
+Note: Passwords must be bcrypt hashed. Use online tool or:
+- Install: npm install -g bcrypt-cli
+- Hash: bcrypt-cli "yourpassword"
+
+=====================================================
+STEP 7: RUN DEVELOPMENT SERVER
+=====================================================
+
+1. Start the development server:
+   npm run dev
+
+2. Open browser and navigate to:
+   http://localhost:3000
+
+3. You should see the homepage
+
+4. Click "Login" and use admin credentials
+
+=====================================================
+STEP 8: SSL/HTTPS SETUP (PRODUCTION)
+=====================================================
+
+For production deployment with SSL:
+
+Option A: Deploy to Vercel (Easiest)
+-------------------------------------
+1. Push code to GitHub
+2. Import project in Vercel
+3. Add environment variables
+4. Deploy (SSL automatic)
+
+Option B: Self-Hosted with SSL
+-------------------------------
+1. Get SSL certificate (Let's Encrypt recommended)
+2. Configure reverse proxy (nginx/Apache)
+3. Point domain to server
+4. Update NEXTAUTH_URL to https://yourdomain.com
+
+Option C: Docker with SSL
+--------------------------
+See DOCKER_DEPLOYMENT.txt (if provided)
+
+=====================================================
+STEP 9: CUSTOMER DATA IMPORT
+=====================================================
+
+1. Prepare Excel file with columns:
+   - Customer Name
+   - Email
+   - Phone
+   - Drop Point
+   - Address
+   - Suburb
+   - State
+   - Postcode
+   - Tank Number
+   - Tank Capacity
+
+2. Login as admin
+3. Go to Admin Dashboard
+4. Click "Import Customers"
+5. Upload Excel file
+
+=====================================================
+STEP 10: POWER BI INTEGRATION (OPTIONAL)
+=====================================================
+
+For telemetry data from Power BI:
+
+1. Register Azure AD application
+2. Get credentials:
+   - Client ID
+   - Client Secret
+   - Tenant ID
+   - Report ID
+   - Workspace ID
+
+3. Add to .env file:
+   POWERBI_CLIENT_ID="your-client-id"
+   POWERBI_CLIENT_SECRET="your-secret"
+   POWERBI_TENANT_ID="your-tenant-id"
+   POWERBI_REPORT_ID="your-report-id"
+   POWERBI_WORKSPACE_ID="your-workspace-id"
+
+4. Implement Power BI sync in:
+   app/api/telemetry/route.ts
+
+=====================================================
+TESTING THE APPLICATION
+=====================================================
+
+1. Customer Login:
+   - Login with customer credentials
+   - Select site from dropdown
+   - Submit tank readings
+   - Readings exported to Excel & emailed
+
+2. Driver Login:
+   - Login with driver credentials
+   - Search telemetry by name/drop point
+   - View tank levels and status
+
+3. Admin Login:
+   - Login with admin credentials
+   - Manage users and customers
+   - Import customer data
+   - Export readings manually
+   - View all system data
+
+=====================================================
+PRODUCTION CHECKLIST
+=====================================================
+
+Before going live:
+
+[ ] Update all .env variables with production values
+[ ] Change NEXTAUTH_URL to production domain (https://)
+[ ] Enable HTTPS/SSL certificate
+[ ] Use strong database password
+[ ] Generate new encryption keys
+[ ] Set up proper email service (not Gmail)
+[ ] Configure firewall rules
+[ ] Set up database backups
+[ ] Test all user roles
+[ ] Test email delivery
+[ ] Test Excel export
+[ ] Enable production logging
+[ ] Set NODE_ENV=production
+[ ] Review security headers
+[ ] Test on mobile devices
+[ ] Load testing
+[ ] Set up monitoring (optional)
+
+=====================================================
+TROUBLESHOOTING
+=====================================================
+
+Issue: "Cannot find module 'next'"
+Solution: Run npm install
+
+Issue: Database connection error
+Solution: Check DATABASE_URL in .env, ensure PostgreSQL is running
+
+Issue: Email not sending
+Solution: Verify SMTP credentials, check firewall, use app password for Gmail
+
+Issue: Login not working
+Solution: Check NEXTAUTH_SECRET is set, clear browser cookies
+
+Issue: Prisma errors
+Solution: Run npx prisma generate && npx prisma db push
+
+Issue: Port 3000 already in use
+Solution: Run on different port: npm run dev -- -p 3001
+
+=====================================================
+SUPPORT & DOCUMENTATION
+=====================================================
+
+Framework Documentation:
+- Next.js: https://nextjs.org/docs
+- Prisma: https://www.prisma.io/docs
+- NextAuth: https://next-auth.js.org
+- Tailwind: https://tailwindcss.com/docs
+
+Security:
+- All passwords are bcrypt hashed
+- Sensitive data encrypted with AES-256-GCM
+- Session tokens via JWT
+- HTTPS required for production
+
+=====================================================
+PROJECT STRUCTURE
+=====================================================
+
+lpg-tank-management/
+├── app/                      # Next.js app directory
+│   ├── api/                 # API routes
+│   │   ├── auth/           # Authentication
+│   │   ├── export/         # Excel export
+│   │   ├── import/         # Customer import
+│   │   └── telemetry/      # Telemetry data
+│   ├── login/              # Login page
+│   ├── dashboard/          # User dashboards
+│   ├── admin/              # Admin panel
+│   └── driver/             # Driver portal
+├── lib/                     # Utility libraries
+│   ├── prisma.ts           # Database client
+│   ├── encryption.ts       # Encryption utilities
+│   ├── email.ts            # Email service
+│   └── excel.ts            # Excel generation
+├── prisma/                  # Database schema
+│   └── schema.prisma       # Database models
+├── .env                     # Environment variables (create from .env.example)
+└── package.json            # Dependencies
+
+=====================================================
+DEFAULT PORTS
+=====================================================
+
+Development: http://localhost:3000
+Prisma Studio: http://localhost:5555
+PostgreSQL: localhost:5432
+
+=====================================================
+
+Need help? Check the comments in the code files for detailed explanations.
+
+Good luck with your LPG Tank Management System!

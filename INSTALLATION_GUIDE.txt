@@ -1,0 +1,350 @@
+╔════════════════════════════════════════════════════════════════╗
+║                                                                ║
+║   🚀 LPG TANK MANAGEMENT SYSTEM - INSTALLATION GUIDE 🚀       ║
+║                                                                ║
+║   Follow these steps exactly to get your system running       ║
+║                                                                ║
+╚════════════════════════════════════════════════════════════════╝
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+STEP 1: INSTALL NODE.JS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. Open your web browser
+2. Go to: https://nodejs.org/
+3. Download the LTS version (recommended)
+4. Run the installer
+5. Click "Next" through the installation wizard
+6. Verify installation:
+   
+   Open PowerShell and type:
+   
+   node --version
+   
+   You should see: v18.x.x or v20.x.x
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+STEP 2: NAVIGATE TO PROJECT
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. Open PowerShell
+2. Navigate to project directory:
+
+   cd c:\Users\reidb\qoder\lpg-tank-management
+
+3. Verify you're in the right place:
+
+   ls
+
+   You should see files like: package.json, README.md, etc.
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+STEP 3: INSTALL DEPENDENCIES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Run this command:
+
+npm install
+
+⏱️  This will take 2-5 minutes
+
+You'll see lots of text scrolling. This is normal!
+Wait for it to complete and return to the prompt.
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+STEP 4: CONFIGURE ENVIRONMENT
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. Copy the example environment file:
+
+   cp .env.example .env
+
+2. Open .env file in Notepad:
+
+   notepad .env
+
+3. Update these MINIMUM required values:
+
+   NEXTAUTH_SECRET="my-super-secret-key-change-this"
+   NEXTAUTH_URL="http://localhost:3000"
+   ENCRYPTION_KEY="0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+
+4. Save and close Notepad
+
+📝 Note: You can configure email later
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+STEP 5: SETUP DATABASE (SQLITE - EASIEST)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+For quick testing, use SQLite:
+
+1. Open prisma/schema.prisma in Notepad:
+
+   notepad prisma\schema.prisma
+
+2. Find these lines (around line 5-8):
+
+   datasource db {
+     provider = "postgresql"
+     url      = env("DATABASE_URL")
+   }
+
+3. Change to:
+
+   datasource db {
+     provider = "sqlite"
+     url      = "file:./dev.db"
+   }
+
+4. Save and close
+
+Alternative: Skip this step to use PostgreSQL (see SETUP_INSTRUCTIONS.txt)
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+STEP 6: INITIALIZE DATABASE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Run these commands one by one:
+
+1. Generate Prisma client:
+   
+   npx prisma generate
+
+2. Create database tables:
+   
+   npx prisma db push
+
+3. Seed with demo data:
+   
+   npx prisma db seed
+
+You should see success messages with demo credentials!
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+STEP 7: START THE APPLICATION
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Run this command:
+
+npm run dev
+
+You should see:
+
+   ✓ Ready in Xs
+   ○ Local: http://localhost:3000
+
+DO NOT CLOSE THIS WINDOW! Leave it running.
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+STEP 8: OPEN IN BROWSER
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. Open your web browser
+2. Go to: http://localhost:3000
+3. You should see the LPG Tank Management homepage!
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+STEP 9: LOGIN
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Click "Login" button and use these demo credentials:
+
+┌─────────────────────────────────────────────────────────┐
+│ ADMIN ACCESS:                                           │
+│ Email:    admin@lpgtank.com                             │
+│ Password: admin123                                      │
+├─────────────────────────────────────────────────────────┤
+│ CUSTOMER ACCESS:                                        │
+│ Email:    customer@example.com                          │
+│ Password: customer123                                   │
+├─────────────────────────────────────────────────────────┤
+│ DRIVER ACCESS:                                          │
+│ Email:    driver@example.com                            │
+│ Password: driver123                                     │
+└─────────────────────────────────────────────────────────┘
+
+⚠️  IMPORTANT: Change these passwords in production!
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+✅ SUCCESS! YOU'RE DONE!
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Your LPG Tank Management System is now running!
+
+What to do next:
+1. Explore the admin dashboard
+2. Test customer login and site selection
+3. Try the driver portal
+4. Import customer data (optional)
+5. Configure email settings (for reports)
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🆘 TROUBLESHOOTING
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Problem: "npm is not recognized"
+Solution: Install Node.js (Step 1)
+
+Problem: "Cannot find module 'next'"
+Solution: Run: npm install
+
+Problem: "Prisma Client not initialized"
+Solution: Run: npx prisma generate
+
+Problem: "Port 3000 already in use"
+Solution: Run: npm run dev -- -p 3001
+          Then open: http://localhost:3001
+
+Problem: Login not working
+Solution: Make sure you ran: npx prisma db seed
+
+Problem: Page shows errors
+Solution: Check PowerShell window for error messages
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📚 ADDITIONAL RESOURCES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+For more detailed information:
+
+📖 QUICKSTART.txt          - Quick reference guide
+📖 SETUP_INSTRUCTIONS.txt  - Comprehensive setup guide  
+📖 README.md               - Project documentation
+📖 PROJECT_SUMMARY.txt     - Complete project overview
+📖 FILES.txt               - File structure reference
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🔧 USEFUL COMMANDS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Start development server:
+npm run dev
+
+View database (Prisma Studio):
+npx prisma studio
+
+Stop the server:
+Press Ctrl+C in PowerShell window
+
+Build for production:
+npm run build
+
+Start production server:
+npm start
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+⚙️ OPTIONAL: CONFIGURE EMAIL
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+To enable email reports to vic@elgas.com.au:
+
+1. Edit .env file
+2. Update these values:
+
+   SMTP_HOST="smtp.gmail.com"
+   SMTP_PORT="587"
+   SMTP_USER="your-email@gmail.com"
+   SMTP_PASSWORD="your-app-password"
+   EMAIL_FROM="noreply@yourdomain.com"
+   EMAIL_TO="vic@elgas.com.au"
+
+3. For Gmail, create an App Password:
+   - Go to: https://myaccount.google.com/apppasswords
+   - Enable 2-Factor Authentication first
+   - Generate App Password
+   - Use that password in SMTP_PASSWORD
+
+4. Restart the server (Ctrl+C, then npm run dev)
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🎯 TESTING THE FEATURES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+AS CUSTOMER:
+1. Login with: customer@example.com / customer123
+2. Select "DP-001 - 123 Main Street" from dropdown
+3. Submit a tank reading
+4. View reading history
+
+AS DRIVER:
+1. Login with: driver@example.com / driver123
+2. Search for "DP-001" in the search box
+3. View telemetry data for tanks
+
+AS ADMIN:
+1. Login with: admin@lpgtank.com / admin123
+2. View all users and customers
+3. Try importing customer data (Excel file)
+4. Export tank readings
+5. Manage system users
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🌐 PREPARING FOR PRODUCTION
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+When ready to deploy to production:
+
+1. ✅ Change all demo passwords
+2. ✅ Generate new NEXTAUTH_SECRET and ENCRYPTION_KEY
+3. ✅ Set up PostgreSQL database (instead of SQLite)
+4. ✅ Get SSL certificate (Let's Encrypt recommended)
+5. ✅ Update NEXTAUTH_URL to your domain (https://)
+6. ✅ Configure production email service
+7. ✅ Set NODE_ENV=production
+8. ✅ Run: npm run build
+9. ✅ Deploy to server or Vercel
+
+See SETUP_INSTRUCTIONS.txt for detailed deployment guide.
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📞 NEED HELP?
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. Read the documentation files
+2. Check the troubleshooting section above
+3. Review error messages in PowerShell
+4. Contact: vic@elgas.com.au
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🎉 CONGRATULATIONS!
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+You now have a fully functional LPG Tank Management System with:
+
+✅ Secure authentication
+✅ Multi-site support
+✅ Tank reading submissions
+✅ Excel reports
+✅ Email automation
+✅ Admin dashboard
+✅ Driver portal
+✅ Modern dark theme
+✅ Mobile responsive design
+
+Enjoy using your new system! 🚀
+
+
+╔════════════════════════════════════════════════════════════════╗
+║  LPG Tank Management System v1.0                               ║
+║  Built with Next.js, React, TypeScript, and Prisma             ║
+║  © 2026 - All Rights Reserved                                  ║
+╚════════════════════════════════════════════════════════════════╝

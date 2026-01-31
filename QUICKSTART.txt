@@ -1,0 +1,119 @@
+========================================
+QUICK START GUIDE
+========================================
+
+FASTEST WAY TO GET STARTED:
+
+1. INSTALL NODE.JS
+   Download from: https://nodejs.org/
+   Install with default settings
+
+2. OPEN POWERSHELL IN PROJECT FOLDER
+   cd c:\Users\reidb\qoder\lpg-tank-management
+
+3. INSTALL DEPENDENCIES
+   npm install
+   
+   This may take 2-5 minutes
+
+4. SETUP DATABASE (SQLITE - EASIEST FOR TESTING)
+   
+   Edit prisma/schema.prisma:
+   Change line 6-8 from:
+     datasource db {
+       provider = "postgresql"
+       url      = env("DATABASE_URL")
+     }
+   
+   To:
+     datasource db {
+       provider = "sqlite"
+       url      = "file:./dev.db"
+     }
+
+5. CREATE .ENV FILE
+   Copy .env.example to .env:
+   cp .env.example .env
+   
+   Edit .env and set minimum required:
+   NEXTAUTH_SECRET="any-random-string-here"
+   NEXTAUTH_URL="http://localhost:3000"
+   ENCRYPTION_KEY="0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+   
+   (Other email settings can be configured later)
+
+6. INITIALIZE DATABASE
+   npx prisma generate
+   npx prisma db push
+   npx prisma db seed
+
+7. START THE APP
+   npm run dev
+
+8. OPEN BROWSER
+   http://localhost:3000
+
+9. LOGIN WITH DEMO CREDENTIALS
+   Admin:
+     Email: admin@lpgtank.com
+     Password: admin123
+   
+   Customer:
+     Email: customer@example.com
+     Password: customer123
+   
+   Driver:
+     Email: driver@example.com
+     Password: driver123
+
+========================================
+TROUBLESHOOTING
+========================================
+
+ERROR: "Cannot find module 'next'"
+FIX: Run: npm install
+
+ERROR: "Prisma Client did not initialize"
+FIX: Run: npx prisma generate
+
+ERROR: Port 3000 already in use
+FIX: Run on different port: npm run dev -- -p 3001
+
+ERROR: Database connection failed
+FIX: Use SQLite (see step 4 above) or set up PostgreSQL
+
+========================================
+NEXT STEPS
+========================================
+
+1. Configure email settings in .env (for sending reports)
+2. Import your customer data (Admin Dashboard > Import)
+3. Set up SSL certificate for production
+4. Change all demo passwords
+5. Configure Power BI integration (optional)
+
+For detailed instructions, see SETUP_INSTRUCTIONS.txt
+
+========================================
+FEATURES TO TEST
+========================================
+
+AS CUSTOMER:
+- Login with customer@example.com / customer123
+- Select site from dropdown
+- Submit tank reading
+- View reading history
+
+AS DRIVER:
+- Login with driver@example.com / driver123
+- Search telemetry by drop point
+- View tank levels
+
+AS ADMIN:
+- Login with admin@lpgtank.com / admin123
+- View all users and customers
+- Import customer data from Excel
+- Export readings to Excel
+- Manage system settings
+
+========================================

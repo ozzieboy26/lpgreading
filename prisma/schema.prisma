@@ -1,0 +1,137 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  password      String
+  name          String
+  role          String    @default("CUSTOMER")
+  active        Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  customerId    String?
+  customer      Customer? @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  
+  tankReadings  TankReading[]
+  
+  @@index([email])
+  @@index([customerId])
+}
+
+model Customer {
+  id            String    @id @default(cuid())
+  name          String
+  email         String
+  phone         String?
+  active        Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  users         User[]
+  sites         Site[]
+  
+  @@index([name])
+}
+
+model Site {
+  id              String    @id @default(cuid())
+  dropPointNumber String    @unique
+  address         String
+  suburb          String?
+  state           String?
+  postcode        String?
+  customerId      String
+  customer        Customer  @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  tanks           Tank[]
+  tankReadings    TankReading[]
+  
+  @@index([customerId])
+  @@index([dropPointNumber])
+}
+
+model Tank {
+  id              String    @id @default(cuid())
+  tankNumber      String
+  capacity        Float
+  product         String    @default("LPG")
+  serialNumber    String?
+  siteId          String
+  site            Site      @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  tankReadings    TankReading[]
+  
+  @@unique([siteId, tankNumber])
+  @@index([siteId])
+}
+
+model TankReading {
+  id              String    @id @default(cuid())
+  reading         Float
+  percentage      Float?
+  estimatedVolume Float?
+  notes           String?
+  photoUrl        String?
+  submittedAt     DateTime  @default(now())
+  exported        Boolean   @default(false)
+  exportedAt      DateTime?
+  
+  userId          String
+  user            User      @relation(fields: [userId], references: [id])
+  
+  siteId          String
+  site            Site      @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  
+  tankId          String
+  tank            Tank      @relation(fields: [tankId], references: [id], onDelete: Cascade)
+  
+  @@index([userId])
+  @@index([siteId])
+  @@index([tankId])
+  @@index([submittedAt])
+  @@index([exported])
+}
+
+model TelemetryData {
+  id              String    @id @default(cuid())
+  dropPointNumber String
+  tankNumber      String
+  reading         Float
+  percentage      Float?
+  temperature     Float?
+  pressure        Float?
+  batteryLevel    Float?
+  signalStrength  Int?
+  timestamp       DateTime
+  createdAt       DateTime  @default(now())
+  
+  @@index([dropPointNumber])
+  @@index([timestamp])
+}
+
+model AuditLog {
+  id          String    @id @default(cuid())
+  userId      String
+  action      String
+  entity      String
+  entityId    String?
+  details     String?
+  ipAddress   String?
+  timestamp   DateTime  @default(now())
+  
+  @@index([userId])
+  @@index([timestamp])
+  @@index([entity])
+}
