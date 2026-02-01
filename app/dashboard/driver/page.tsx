@@ -17,6 +17,17 @@ export default function DriverDashboard() {
     loadTankData()
   }, [])
   
+  // Real-time search as user types
+  const filteredData = telemetryData.filter((item) => {
+    const search = searchTerm.toLowerCase()
+    return (
+      item.dropPointNumber?.toLowerCase().includes(search) ||
+      item.customerName?.toLowerCase().includes(search) ||
+      item.address?.toLowerCase().includes(search) ||
+      item.tankNumber?.toLowerCase().includes(search)
+    )
+  })
+  
   const loadTankData = async () => {
     try {
       setLoading(true)
@@ -71,17 +82,6 @@ export default function DriverDashboard() {
     return Math.max(0, ullage)
   }
 
-  const handleSearch = () => {
-    // In production, this would call the API
-    console.log('Searching for:', searchTerm)
-  }
-
-  const filteredData = telemetryData.filter(
-    (item) =>
-      item.dropPointNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.tankNumber.toLowerCase().includes(searchTerm.toLowerCase())
-  )
-
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
@@ -98,23 +98,21 @@ export default function DriverDashboard() {
         <div className="card mb-8">
           <div className="flex items-center space-x-2 mb-4">
             <Search className="w-6 h-6 text-primary" />
-            <h2 className="text-2xl font-semibold">Search Telemetry</h2>
+            <h2 className="text-2xl font-semibold">Search Tanks</h2>
           </div>
 
-          <div className="flex gap-4">
-            <div className="flex-1">
-              <input
-                type="text"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="input"
-                placeholder="Search by drop point or tank number..."
-              />
-            </div>
-            <button onClick={handleSearch} className="btn btn-primary">
-              <Search className="w-4 h-4 mr-2" />
-              Search
-            </button>
+          <div className="flex-1">
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="input w-full"
+              placeholder="Search by drop point, customer name, address, or tank number..."
+            />
+            <p className="text-sm text-gray-400 mt-2">
+              {filteredData.length} tank(s) found
+              {searchTerm && ` matching "${searchTerm}"`}
+            </p>
           </div>
         </div>
 
@@ -134,12 +132,18 @@ export default function DriverDashboard() {
                     <MapPin className="w-5 h-5 text-primary" />
                     {data.dropPointNumber}
                   </h3>
-                  <p className="text-gray-400">
+                  <p className="text-sm text-gray-400 mt-1">
+                    {data.customerName}
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    {data.address}
+                  </p>
+                  <p className="text-gray-400 mt-1">
                     Tank {data.tankNumber} - {data.tankType === 'aboveground' ? 'Above Ground' : 'Underground'}
                   </p>
                 </div>
                 <span className="px-3 py-1 bg-accent/20 text-accent text-sm rounded">
-                  {data.percentage}%
+                  {data.percentage.toFixed(1)}%
                 </span>
               </div>
 
