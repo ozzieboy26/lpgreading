@@ -165,9 +165,13 @@ export async function importCustomersFromExcel(
     const headerValue = cell.value?.toString().toLowerCase().trim() || ''
     
     // Map various possible header names to standard field names
-    if (headerValue.includes('customer') && headerValue.includes('name')) {
+    if (headerValue.includes('customer') && (headerValue.includes('name') || headerValue.includes('customer'))) {
+      columnMap['customerName'] = colNumber
+    } else if (headerValue.includes('drop') && headerValue.includes('customer')) {
       columnMap['customerName'] = colNumber
     } else if (headerValue.includes('contact') && headerValue.includes('name')) {
+      columnMap['contactName'] = colNumber
+    } else if (headerValue === 'contact') {
       columnMap['contactName'] = colNumber
     } else if (headerValue === 'email' || headerValue.includes('e-mail')) {
       columnMap['email'] = colNumber
@@ -175,16 +179,26 @@ export async function importCustomersFromExcel(
       columnMap['phone'] = colNumber
     } else if (headerValue === 'address' || headerValue.includes('street')) {
       columnMap['address'] = colNumber
+    } else if (headerValue === 'sitename' || headerValue.includes('site') && headerValue.includes('name')) {
+      columnMap['siteName'] = colNumber
     } else if (headerValue === 'suburb' || headerValue.includes('city')) {
       columnMap['suburb'] = colNumber
-    } else if (headerValue === 'state' || headerValue.includes('province')) {
+    } else if (headerValue === 'state' || headerValue.includes('state') || headerValue.includes('province')) {
       columnMap['state'] = colNumber
     } else if (headerValue === 'postcode' || headerValue.includes('zip') || headerValue === 'post code') {
       columnMap['postcode'] = colNumber
-    } else if (headerValue.includes('drop') && headerValue.includes('point')) {
+    } else if ((headerValue.includes('drop') && headerValue.includes('point')) || (headerValue.includes('drop') && headerValue.includes('pont'))) {
+      // Handle both "DROP POINT" and "DROP PONT" (typo)
       columnMap['dropPoint'] = colNumber
     } else if (headerValue.includes('tank') && headerValue.includes('number')) {
       columnMap['tankNumber'] = colNumber
+    } else if (headerValue.includes('tanksize')) {
+      // Handle TANKSIZE_T1, TANKSIZE_T2, etc. - store as tankSize1, tankSize2, etc.
+      const match = headerValue.match(/tanksize[_\s]*t?(\d+)/)
+      if (match) {
+        const tankNum = match[1]
+        columnMap[`tankSize${tankNum}`] = colNumber
+      }
     } else if (headerValue.includes('capacity')) {
       columnMap['capacity'] = colNumber
     } else if (headerValue.includes('serial')) {
@@ -193,6 +207,8 @@ export async function importCustomersFromExcel(
       columnMap['product'] = colNumber
     } else if (headerValue.includes('tank') && headerValue.includes('type')) {
       columnMap['tankType'] = colNumber
+    } else if (headerValue === 'notes') {
+      columnMap['notes'] = colNumber
     }
   })
 
@@ -211,6 +227,7 @@ export async function importCustomersFromExcel(
         const email = columnMap['email'] ? row.getCell(columnMap['email']).value?.toString().trim() : undefined
         const phone = columnMap['phone'] ? row.getCell(columnMap['phone']).value?.toString().trim() : undefined
         const address = columnMap['address'] ? row.getCell(columnMap['address']).value?.toString().trim() : undefined
+        const siteName = columnMap['siteName'] ? row.getCell(columnMap['siteName']).value?.toString().trim() : undefined
         const suburb = columnMap['suburb'] ? row.getCell(columnMap['suburb']).value?.toString().trim() : undefined
         const state = columnMap['state'] ? row.getCell(columnMap['state']).value?.toString().trim() : undefined
         const postcode = columnMap['postcode'] ? row.getCell(columnMap['postcode']).value?.toString().trim() : undefined
@@ -220,6 +237,23 @@ export async function importCustomersFromExcel(
         const serialNumber = columnMap['serialNumber'] ? row.getCell(columnMap['serialNumber']).value?.toString().trim() : undefined
         const product = columnMap['product'] ? row.getCell(columnMap['product']).value?.toString().trim() : 'LPG'
         const tankType = columnMap['tankType'] ? row.getCell(columnMap['tankType']).value?.toString().trim() : undefined
+        const notes = columnMap['notes'] ? row.getCell(columnMap['notes']).value?.toString().trim() : undefined
+        
+        // Extract multiple tank sizes (TANKSIZE_T1, TANKSIZE_T2, etc.)
+        const tankSizes: { [key: string]: number } = {}
+        for (let i = 1; i <= 8; i++) {
+          const tankSizeKey = `tankSize${i}`
+          if (columnMap[tankSizeKey]) {
+            const value = row.getCell(columnMap[tankSizeKey]).value
+            if (value) {
+              const sizeStr = value.toString().replace(/[^0-9.]/g, '')
+              const size = parseFloat(sizeStr)
+              if (size > 0) {
+                tankSizes[`T${i}`] = size
+              }
+            }
+          }
+        }
         
         // Parse capacity - handle various formats
         let tankCapacity = 0
@@ -236,7 +270,7 @@ export async function importCustomersFromExcel(
 
         // Use drop point as customer name if customer name is missing
         const finalCustomerName = customerName || dropPoint
-        const finalAddress = address || `Site ${dropPoint}`
+        const finalAddress = address || siteName || `Site ${dropPoint}`
         
         // Use contact name if provided, otherwise use customer name
         const finalContactName = contactName || finalCustomerName
@@ -277,8 +311,32 @@ export async function importCustomersFromExcel(
           },
         })
 
-        // Create tank if tank data is provided
-        if (tankNumber && tankCapacity > 0) {
+        // Create tanks from tankSizes columns (TANKSIZE_T1, T2, etc.)
+        if (Object.keys(tankSizes).length > 0) {
+          for (const [tankNum, capacity] of Object.entries(tankSizes)) {
+            await prisma.tank.upsert({
+              where: {
+                siteId_tankNumber: {
+                  siteId: site.id,
+                  tankNumber: tankNum,
+                },
+              },
+              update: { 
+                capacity: capacity,
+                product: product || 'LPG',
+                serialNumber: serialNumber || null,
+              },
+              create: {
+                tankNumber: tankNum,
+                capacity: capacity,
+                product: product || 'LPG',
+                serialNumber: serialNumber || null,
+                siteId: site.id,
+              },
+            })
+          }
+        } else if (tankNumber && tankCapacity > 0) {
+          // Fallback: Create single tank if tank data is provided in old format
           await prisma.tank.upsert({
             where: {
               siteId_tankNumber: {

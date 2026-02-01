@@ -6,7 +6,7 @@ cd c:\Users\reidb\qoder\lpg-tank-management
 git add .
 
 # Commit with message
-git commit -m "Add customer site linking, multi-site support for customers, and tank management page"
+git commit -m "Fix Excel import: handle DROP PONT typo, multiple TANKSIZE columns, and enhanced column detection"
 
 # Push to GitHub (which will trigger Render deployment)
 git push origin main
