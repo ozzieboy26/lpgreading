@@ -14,7 +14,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { startDate, endDate } = body
+    const { startDate, endDate, emailTo } = body
 
     // Generate Excel file
     const excelBuffer = await generateTankReadingsExcel(
@@ -22,14 +22,15 @@ export async function POST(request: NextRequest) {
       endDate ? new Date(endDate) : undefined
     )
 
-    // Send email
+    // Send email with optional custom recipient
     const fileName = `tank-readings-${new Date().toISOString().split('T')[0]}.xlsx`
-    await sendTankReadingEmail(excelBuffer, fileName)
+    await sendTankReadingEmail(excelBuffer, fileName, emailTo)
 
     return NextResponse.json({
       success: true,
       message: 'Tank readings exported and emailed successfully',
       fileName,
+      sentTo: emailTo || process.env.EMAIL_TO || 'telemetry@lpgreadings.au',
     })
   } catch (error) {
     console.error('Export error:', error)

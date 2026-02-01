@@ -14,7 +14,8 @@ export async function GET(request: NextRequest) {
 
     // Get settings from database or use defaults
     const settings = {
-      emailRecipient: process.env.EMAIL_TO || 'telemetry@lpgreadings.au',
+      emailRecipient: process.env.EMAIL_TO || 'vic@elgas.com.au', // Who receives the readings
+      emailSender: process.env.EMAIL_FROM || 'telemetry@lpgreadings.au', // Who sends the readings
       autoExport: false, // Whether to automatically export readings
       exportFrequency: 'daily', // daily, weekly, monthly
     }
@@ -44,7 +45,8 @@ export async function POST(request: NextRequest) {
     // In production, you would save these to a Settings table
     // For now, we'll just return them
     const settings = {
-      emailRecipient: emailRecipient || 'telemetry@lpgreadings.au',
+      emailRecipient: emailRecipient || 'vic@elgas.com.au',
+      emailSender: process.env.EMAIL_FROM || 'telemetry@lpgreadings.au',
       autoExport: autoExport || false,
       exportFrequency: exportFrequency || 'daily',
     }

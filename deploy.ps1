@@ -6,7 +6,7 @@ cd c:\Users\reidb\qoder\lpg-tank-management
 git add .
 
 # Commit with message
-git commit -m "Implement real admin functionality: Add/Edit/Delete users, Import customers, Export readings"
+git commit -m "Fix email configuration: telemetry@lpgreadings.au as sender, vic@elgas.com.au as recipient"
 
 # Push to GitHub (which will trigger Render deployment)
 git push origin main

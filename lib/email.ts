@@ -42,7 +42,10 @@ export async function sendTankReadingEmail(
   fileName: string,
   emailTo?: string
 ): Promise<void> {
-  const recipientEmail = emailTo || process.env.EMAIL_TO || 'telemetry@lpgreadings.au'
+  // Recipient (who receives the readings)
+  const recipientEmail = emailTo || process.env.EMAIL_TO || 'vic@elgas.com.au'
+  // Sender (who sends the readings - telemetry system)
+  const senderEmail = process.env.EMAIL_FROM || 'telemetry@lpgreadings.au'
   
   await sendEmail({
     to: recipientEmail,

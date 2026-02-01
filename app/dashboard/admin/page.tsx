@@ -23,6 +23,7 @@ export default function AdminDashboard() {
   const [editingUser, setEditingUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState<{type: 'success' | 'error', text: string} | null>(null)
+  const [emailRecipient, setEmailRecipient] = useState('vic@elgas.com.au') // Who receives the readings
   
   // Mock tank data - in production this would come from API
   const [tanks, setTanks] = useState([
@@ -33,6 +34,7 @@ export default function AdminDashboard() {
   // Load users on mount
   useEffect(() => {
     loadUsers()
+    loadSettings()
   }, [])
 
   const loadUsers = async () => {
@@ -44,6 +46,18 @@ export default function AdminDashboard() {
       }
     } catch (error) {
       console.error('Failed to load users:', error)
+    }
+  }
+
+  const loadSettings = async () => {
+    try {
+      const res = await fetch('/api/settings')
+      if (res.ok) {
+        const data = await res.json()
+        setEmailRecipient(data.settings.emailRecipient)
+      }
+    } catch (error) {
+      console.error('Failed to load settings:', error)
     }
   }
 
@@ -105,7 +119,7 @@ export default function AdminDashboard() {
       const res = await fetch('/api/export', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({}),
+        body: JSON.stringify({ emailTo: emailRecipient }),
       })
 
       const data = await res.json()
@@ -113,7 +127,7 @@ export default function AdminDashboard() {
       if (res.ok) {
         setMessage({
           type: 'success',
-          text: `Tank readings exported successfully and emailed to vic@elgas.com.au`
+          text: `Tank readings exported successfully and emailed to ${data.sentTo || emailRecipient}`
         })
       } else {
         setMessage({ type: 'error', text: data.error || 'Failed to export readings' })
@@ -207,6 +221,32 @@ export default function AdminDashboard() {
     }
   }
 
+  const handleSaveSettings = async () => {
+    setLoading(true)
+    setMessage(null)
+
+    try {
+      const res = await fetch('/api/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ emailRecipient }),
+      })
+
+      const data = await res.json()
+
+      if (res.ok) {
+        setMessage({ type: 'success', text: 'Settings saved successfully' })
+      } else {
+        setMessage({ type: 'error', text: data.error || 'Failed to save settings' })
+      }
+    } catch (error) {
+      console.error('Save settings error:', error)
+      setMessage({ type: 'error', text: 'Failed to save settings' })
+    } finally {
+      setLoading(false)
+    }
+  }
+
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
@@ -283,10 +323,25 @@ export default function AdminDashboard() {
               <Download className="w-6 h-6 text-primary" />
               Export Tank Readings
             </h2>
-            <p className="text-gray-400 mb-4">
-              Export all tank readings to Excel and email to vic@elgas.com.au
+            <p className="text-gray-400 mb-2">
+              Sender: <span className="text-accent font-semibold">telemetry@lpgreadings.au</span>
             </p>
-            <button onClick={handleExport} className="btn btn-primary">
+            <p className="text-gray-400 mb-2">
+              Recipient (who receives the Excel file):
+            </p>
+            <div className="mb-4 flex items-center gap-2">
+              <input
+                type="email"
+                value={emailRecipient}
+                onChange={(e) => setEmailRecipient(e.target.value)}
+                className="flex-1 px-4 py-2 bg-secondary border border-gray-700 rounded-lg text-white focus:outline-none focus:border-primary"
+                placeholder="vic@elgas.com.au"
+              />
+              <button onClick={handleSaveSettings} className="btn btn-secondary" disabled={loading}>
+                Save
+              </button>
+            </div>
+            <button onClick={handleExport} className="btn btn-primary" disabled={loading}>
               <Download className="w-4 h-4 mr-2" />
               Export & Email
             </button>
