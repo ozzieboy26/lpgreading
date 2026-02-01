@@ -39,12 +39,13 @@ export async function sendEmail(options: EmailOptions): Promise<void> {
 
 export async function sendTankReadingEmail(
   excelBuffer: Buffer,
-  fileName: string
+  fileName: string,
+  emailTo?: string
 ): Promise<void> {
-  const emailTo = process.env.EMAIL_TO || 'vic@elgas.com.au'
+  const recipientEmail = emailTo || process.env.EMAIL_TO || 'telemetry@lpgreadings.au'
   
   await sendEmail({
-    to: emailTo,
+    to: recipientEmail,
     subject: `LPG Tank Readings - ${new Date().toLocaleDateString()}`,
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px;">

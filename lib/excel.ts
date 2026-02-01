@@ -155,81 +155,119 @@ export async function importCustomersFromExcel(
 
   let success = 0
   const errors: string[] = []
+  const promises: Promise<void>[] = []
 
-  // Expected columns: Customer Name, Email, Phone, Drop Point, Address, Suburb, State, Postcode, Tank Number, Tank Capacity
-  worksheet.eachRow(async (row, rowNumber) => {
+  // Expected columns based on customer portal database format:
+  // Customer Name, Contact Name, Email, Phone, Address, Suburb, State, Postcode, 
+  // Drop Point, Tank Number, Capacity, Serial Number, Product, Tank Type, etc.
+  worksheet.eachRow((row, rowNumber) => {
     if (rowNumber === 1) return // Skip header
 
-    try {
-      const customerName = row.getCell(1).value?.toString().trim()
-      const email = row.getCell(2).value?.toString().trim()
-      const phone = row.getCell(3).value?.toString().trim()
-      const dropPoint = row.getCell(4).value?.toString().trim()
-      const address = row.getCell(5).value?.toString().trim()
-      const suburb = row.getCell(6).value?.toString().trim()
-      const state = row.getCell(7).value?.toString().trim()
-      const postcode = row.getCell(8).value?.toString().trim()
-      const tankNumber = row.getCell(9).value?.toString().trim()
-      const tankCapacity = parseFloat(row.getCell(10).value?.toString() || '0')
+    const promise = (async () => {
+      try {
+        // Extract all customer and site data
+        const customerName = row.getCell(1).value?.toString().trim() // Customer Name
+        const contactName = row.getCell(2).value?.toString().trim() // Contact Name
+        const email = row.getCell(3).value?.toString().trim() // Email
+        const phone = row.getCell(4).value?.toString().trim() // Phone
+        const address = row.getCell(5).value?.toString().trim() // Address
+        const suburb = row.getCell(6).value?.toString().trim() // Suburb
+        const state = row.getCell(7).value?.toString().trim() // State
+        const postcode = row.getCell(8).value?.toString().trim() // Postcode
+        const dropPoint = row.getCell(9).value?.toString().trim() // Drop Point
+        const tankNumber = row.getCell(10).value?.toString().trim() // Tank Number
+        const capacity = row.getCell(11).value // Capacity
+        const serialNumber = row.getCell(12).value?.toString().trim() // Serial Number
+        const product = row.getCell(13).value?.toString().trim() || 'LPG' // Product
+        const tankType = row.getCell(14).value?.toString().trim() // Tank Type (aboveground/underground)
+        
+        // Parse capacity - handle various formats
+        let tankCapacity = 0
+        if (capacity) {
+          const capacityStr = capacity.toString().replace(/[^0-9.]/g, '')
+          tankCapacity = parseFloat(capacityStr) || 0
+        }
 
-      if (!customerName || !email || !dropPoint || !address) {
-        errors.push(`Row ${rowNumber}: Missing required fields`)
-        return
-      }
+        // Validate required fields
+        if (!customerName || !dropPoint || !address) {
+          errors.push(`Row ${rowNumber}: Missing required fields (Customer Name, Drop Point, or Address)`)
+          return
+        }
 
-      // Create or update customer
-      const customer = await prisma.customer.upsert({
-        where: { id: email }, // Using email as unique identifier
-        update: { name: customerName, phone: phone || '' },
-        create: {
-          name: customerName,
-          email: email,
-          phone: phone || '',
-        },
-      })
+        // Use contact name if provided, otherwise use customer name
+        const finalContactName = contactName || customerName
+        const finalEmail = email || `${dropPoint.toLowerCase().replace(/[^a-z0-9]/g, '')}@customer.local`
 
-      // Create or update site
-      const site = await prisma.site.upsert({
-        where: { dropPointNumber: dropPoint },
-        update: {
-          address,
-          suburb,
-          state,
-          postcode,
-        },
-        create: {
-          dropPointNumber: dropPoint,
-          address,
-          suburb,
-          state,
-          postcode,
-          customerId: customer.id,
-        },
-      })
-
-      // Create tank if provided
-      if (tankNumber && tankCapacity > 0) {
-        await prisma.tank.upsert({
-          where: {
-            siteId_tankNumber: {
-              siteId: site.id,
-              tankNumber: tankNumber,
-            },
+        // Create or update customer
+        const customer = await prisma.customer.upsert({
+          where: { id: finalEmail },
+          update: { 
+            name: customerName, 
+            phone: phone || '',
           },
-          update: { capacity: tankCapacity },
           create: {
-            tankNumber,
-            capacity: tankCapacity,
-            siteId: site.id,
+            id: finalEmail,
+            name: customerName,
+            email: finalEmail,
+            phone: phone || '',
           },
         })
-      }
 
-      success++
-    } catch (error) {
-      errors.push(`Row ${rowNumber}: ${error}`)
-    }
+        // Create or update site
+        const site = await prisma.site.upsert({
+          where: { dropPointNumber: dropPoint },
+          update: {
+            address,
+            suburb,
+            state,
+            postcode,
+            customerId: customer.id,
+          },
+          create: {
+            dropPointNumber: dropPoint,
+            address,
+            suburb,
+            state,
+            postcode,
+            customerId: customer.id,
+          },
+        })
+
+        // Create tank if tank data is provided
+        if (tankNumber && tankCapacity > 0) {
+          await prisma.tank.upsert({
+            where: {
+              siteId_tankNumber: {
+                siteId: site.id,
+                tankNumber: tankNumber,
+              },
+            },
+            update: { 
+              capacity: tankCapacity,
+              product: product,
+              serialNumber: serialNumber || null,
+            },
+            create: {
+              tankNumber,
+              capacity: tankCapacity,
+              product: product,
+              serialNumber: serialNumber || null,
+              siteId: site.id,
+            },
+          })
+        }
+
+        success++
+      } catch (error: any) {
+        errors.push(`Row ${rowNumber}: ${error.message || error}`)
+      }
+    })()
+
+    promises.push(promise)
   })
+
+  // Wait for all promises to complete
+  await Promise.all(promises)
 
   return { success, errors }
 }

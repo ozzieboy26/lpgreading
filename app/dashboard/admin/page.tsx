@@ -1,19 +1,51 @@
 'use client'
 
 import { useSession } from 'next-auth/react'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Navbar from '@/components/Navbar'
-import { Users, Building2, Upload, Download, Settings, Droplets } from 'lucide-react'
+import { Users, Building2, Upload, Download, Settings, Droplets, X } from 'lucide-react'
+
+interface User {
+  id: string
+  email: string
+  name: string
+  role: string
+  active: boolean
+  customerId: string | null
+  customer?: { name: string } | null
+}
 
 export default function AdminDashboard() {
   const { data: session } = useSession()
   const [activeTab, setActiveTab] = useState('overview')
+  const [users, setUsers] = useState<User[]>([])
+  const [showUserModal, setShowUserModal] = useState(false)
+  const [editingUser, setEditingUser] = useState<User | null>(null)
+  const [loading, setLoading] = useState(false)
+  const [message, setMessage] = useState<{type: 'success' | 'error', text: string} | null>(null)
   
   // Mock tank data - in production this would come from API
   const [tanks, setTanks] = useState([
     { id: '1', tankNumber: 'T1', capacity: 5000, tankType: 'aboveground', dropPoint: 'DP-001' },
     { id: '2', tankNumber: 'T2', capacity: 3000, tankType: 'underground', dropPoint: 'DP-001' },
   ])
+
+  // Load users on mount
+  useEffect(() => {
+    loadUsers()
+  }, [])
+
+  const loadUsers = async () => {
+    try {
+      const res = await fetch('/api/users')
+      if (res.ok) {
+        const data = await res.json()
+        setUsers(data.users)
+      }
+    } catch (error) {
+      console.error('Failed to load users:', error)
+    }
+  }
 
   const handleTankTypeChange = (tankId: string, newType: 'aboveground' | 'underground') => {
     setTanks(tanks.map(tank => 
@@ -23,30 +55,156 @@ export default function AdminDashboard() {
     console.log(`Tank ${tankId} updated to ${newType} (${newType === 'aboveground' ? '85%' : '88%'} fill level)`)
   }
 
-  const handleImportFile = () => {
-    // Create file input element
+  const handleImportFile = async () => {
     const input = document.createElement('input')
     input.type = 'file'
     input.accept = '.xlsx,.xls'
-    input.onchange = (e: any) => {
+    input.onchange = async (e: any) => {
       const file = e.target?.files?.[0]
-      if (file) {
-        alert(`Selected file: ${file.name}\n\nIn production, this would upload to /api/import`)
+      if (!file) return
+
+      setLoading(true)
+      setMessage(null)
+
+      try {
+        const formData = new FormData()
+        formData.append('file', file)
+
+        const res = await fetch('/api/import', {
+          method: 'POST',
+          body: formData,
+        })
+
+        const data = await res.json()
+
+        if (res.ok) {
+          setMessage({
+            type: 'success',
+            text: `Successfully imported ${data.imported} customers. ${data.errors.length > 0 ? `Errors: ${data.errors.join(', ')}` : ''}`
+          })
+          // Reload users to show newly imported customers
+          loadUsers()
+        } else {
+          setMessage({ type: 'error', text: data.error || 'Failed to import file' })
+        }
+      } catch (error) {
+        console.error('Import error:', error)
+        setMessage({ type: 'error', text: 'Failed to import file' })
+      } finally {
+        setLoading(false)
       }
     }
     input.click()
   }
 
   const handleExport = async () => {
-    alert('Exporting tank readings to Excel and emailing to vic@elgas.com.au...\n\nIn production, this would call /api/export')
+    setLoading(true)
+    setMessage(null)
+
+    try {
+      const res = await fetch('/api/export', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+      })
+
+      const data = await res.json()
+
+      if (res.ok) {
+        setMessage({
+          type: 'success',
+          text: `Tank readings exported successfully and emailed to vic@elgas.com.au`
+        })
+      } else {
+        setMessage({ type: 'error', text: data.error || 'Failed to export readings' })
+      }
+    } catch (error) {
+      console.error('Export error:', error)
+      setMessage({ type: 'error', text: 'Failed to export readings' })
+    } finally {
+      setLoading(false)
+    }
   }
 
-  const handleEditUser = (email: string) => {
-    alert(`Edit user: ${email}\n\nIn production, this would open an edit modal`)
+  const handleEditUser = (user: User) => {
+    setEditingUser(user)
+    setShowUserModal(true)
   }
 
   const handleAddUser = () => {
-    alert('Add New User\n\nIn production, this would open a form to create a new user')
+    setEditingUser(null)
+    setShowUserModal(true)
+  }
+
+  const handleSaveUser = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    const formData = new FormData(e.currentTarget)
+    
+    const userData = {
+      id: editingUser?.id,
+      email: formData.get('email') as string,
+      name: formData.get('name') as string,
+      password: formData.get('password') as string,
+      role: formData.get('role') as string,
+      customerId: formData.get('customerId') as string || null,
+      active: formData.get('active') === 'true',
+    }
+
+    setLoading(true)
+    setMessage(null)
+
+    try {
+      const res = await fetch('/api/users', {
+        method: editingUser ? 'PUT' : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(userData),
+      })
+
+      const data = await res.json()
+
+      if (res.ok) {
+        setMessage({
+          type: 'success',
+          text: `User ${editingUser ? 'updated' : 'created'} successfully`
+        })
+        setShowUserModal(false)
+        loadUsers()
+      } else {
+        setMessage({ type: 'error', text: data.error || `Failed to ${editingUser ? 'update' : 'create'} user` })
+      }
+    } catch (error) {
+      console.error('Save user error:', error)
+      setMessage({ type: 'error', text: `Failed to ${editingUser ? 'update' : 'create'} user` })
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleDeleteUser = async (userId: string) => {
+    if (!confirm('Are you sure you want to delete this user?')) return
+
+    setLoading(true)
+    setMessage(null)
+
+    try {
+      const res = await fetch(`/api/users?id=${userId}`, {
+        method: 'DELETE',
+      })
+
+      const data = await res.json()
+
+      if (res.ok) {
+        setMessage({ type: 'success', text: 'User deleted successfully' })
+        loadUsers()
+      } else {
+        setMessage({ type: 'error', text: data.error || 'Failed to delete user' })
+      }
+    } catch (error) {
+      console.error('Delete user error:', error)
+      setMessage({ type: 'error', text: 'Failed to delete user' })
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -67,7 +225,7 @@ export default function AdminDashboard() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-gray-400 text-sm">Total Users</p>
-                <p className="text-3xl font-bold">3</p>
+                <p className="text-3xl font-bold">{users.length}</p>
               </div>
               <Users className="w-12 h-12 text-primary opacity-50" />
             </div>
@@ -77,7 +235,7 @@ export default function AdminDashboard() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-gray-400 text-sm">Customers</p>
-                <p className="text-3xl font-bold">1</p>
+                <p className="text-3xl font-bold">{users.filter(u => u.role === 'CUSTOMER').length}</p>
               </div>
               <Building2 className="w-12 h-12 text-primary opacity-50" />
             </div>
@@ -217,72 +375,42 @@ export default function AdminDashboard() {
                 </tr>
               </thead>
               <tbody>
-                <tr className="border-b border-gray-800 hover:bg-secondary">
-                  <td className="py-3 px-4">System Administrator</td>
-                  <td className="py-3 px-4">admin@lpgtank.com</td>
-                  <td className="py-3 px-4">
-                    <span className="px-2 py-1 bg-primary/20 text-primary text-xs rounded">
-                      ADMIN
-                    </span>
-                  </td>
-                  <td className="py-3 px-4">
-                    <span className="px-2 py-1 bg-accent/20 text-accent text-xs rounded">
-                      Active
-                    </span>
-                  </td>
-                  <td className="py-3 px-4">
-                    <button 
-                      onClick={() => handleEditUser('admin@lpgtank.com')}
-                      className="text-primary hover:text-primary-light mr-2"
-                    >
-                      Edit
-                    </button>
-                  </td>
-                </tr>
-                <tr className="border-b border-gray-800 hover:bg-secondary">
-                  <td className="py-3 px-4">Demo Customer User</td>
-                  <td className="py-3 px-4">customer@example.com</td>
-                  <td className="py-3 px-4">
-                    <span className="px-2 py-1 bg-blue-500/20 text-blue-400 text-xs rounded">
-                      CUSTOMER
-                    </span>
-                  </td>
-                  <td className="py-3 px-4">
-                    <span className="px-2 py-1 bg-accent/20 text-accent text-xs rounded">
-                      Active
-                    </span>
-                  </td>
-                  <td className="py-3 px-4">
-                    <button 
-                      onClick={() => handleEditUser('customer@example.com')}
-                      className="text-primary hover:text-primary-light mr-2"
-                    >
-                      Edit
-                    </button>
-                  </td>
-                </tr>
-                <tr className="border-b border-gray-800 hover:bg-secondary">
-                  <td className="py-3 px-4">Demo Driver</td>
-                  <td className="py-3 px-4">driver@example.com</td>
-                  <td className="py-3 px-4">
-                    <span className="px-2 py-1 bg-green-500/20 text-green-400 text-xs rounded">
-                      DRIVER
-                    </span>
-                  </td>
-                  <td className="py-3 px-4">
-                    <span className="px-2 py-1 bg-accent/20 text-accent text-xs rounded">
-                      Active
-                    </span>
-                  </td>
-                  <td className="py-3 px-4">
-                    <button 
-                      onClick={() => handleEditUser('driver@example.com')}
-                      className="text-primary hover:text-primary-light mr-2"
-                    >
-                      Edit
-                    </button>
-                  </td>
-                </tr>
+                {users.map((user) => (
+                  <tr key={user.id} className="border-b border-gray-800 hover:bg-secondary">
+                    <td className="py-3 px-4">{user.name}</td>
+                    <td className="py-3 px-4">{user.email}</td>
+                    <td className="py-3 px-4">
+                      <span className={`px-2 py-1 text-xs rounded ${
+                        user.role === 'ADMIN' ? 'bg-primary/20 text-primary' :
+                        user.role === 'CUSTOMER' ? 'bg-blue-500/20 text-blue-400' :
+                        'bg-green-500/20 text-green-400'
+                      }`}>
+                        {user.role}
+                      </span>
+                    </td>
+                    <td className="py-3 px-4">
+                      <span className={`px-2 py-1 text-xs rounded ${
+                        user.active ? 'bg-accent/20 text-accent' : 'bg-red-500/20 text-red-400'
+                      }`}>
+                        {user.active ? 'Active' : 'Inactive'}
+                      </span>
+                    </td>
+                    <td className="py-3 px-4">
+                      <button 
+                        onClick={() => handleEditUser(user)}
+                        className="text-primary hover:text-primary-light mr-2"
+                      >
+                        Edit
+                      </button>
+                      <button 
+                        onClick={() => handleDeleteUser(user.id)}
+                        className="text-red-400 hover:text-red-300"
+                      >
+                        Delete
+                      </button>
+                    </td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>
@@ -295,6 +423,121 @@ export default function AdminDashboard() {
           </div>
         </div>
       </div>
+
+      {/* Message Display */}
+      {message && (
+        <div className={`fixed top-4 right-4 p-4 rounded-lg shadow-lg z-50 ${
+          message.type === 'success' ? 'bg-accent/20 border border-accent text-accent' :
+          'bg-red-500/20 border border-red-500 text-red-400'
+        }`}>
+          <div className="flex items-center justify-between">
+            <span>{message.text}</span>
+            <button onClick={() => setMessage(null)} className="ml-4">
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* User Modal */}
+      {showUserModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-secondary border border-gray-800 rounded-lg max-w-md w-full p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-2xl font-bold">
+                {editingUser ? 'Edit User' : 'Add New User'}
+              </h2>
+              <button onClick={() => setShowUserModal(false)} className="text-gray-400 hover:text-white">
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveUser}>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium mb-1">Name</label>
+                  <input
+                    type="text"
+                    name="name"
+                    defaultValue={editingUser?.name}
+                    required
+                    className="w-full px-3 py-2 bg-background border border-gray-700 rounded-lg focus:outline-none focus:border-primary"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-1">Email</label>
+                  <input
+                    type="email"
+                    name="email"
+                    defaultValue={editingUser?.email}
+                    required
+                    className="w-full px-3 py-2 bg-background border border-gray-700 rounded-lg focus:outline-none focus:border-primary"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-1">
+                    Password {editingUser && '(leave blank to keep current)'}
+                  </label>
+                  <input
+                    type="password"
+                    name="password"
+                    required={!editingUser}
+                    className="w-full px-3 py-2 bg-background border border-gray-700 rounded-lg focus:outline-none focus:border-primary"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-1">Role</label>
+                  <select
+                    name="role"
+                    defaultValue={editingUser?.role || 'CUSTOMER'}
+                    required
+                    className="w-full px-3 py-2 bg-background border border-gray-700 rounded-lg focus:outline-none focus:border-primary"
+                  >
+                    <option value="ADMIN">Admin</option>
+                    <option value="CUSTOMER">Customer</option>
+                    <option value="DRIVER">Driver</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-1">Status</label>
+                  <select
+                    name="active"
+                    defaultValue={editingUser?.active ? 'true' : 'false'}
+                    required
+                    className="w-full px-3 py-2 bg-background border border-gray-700 rounded-lg focus:outline-none focus:border-primary"
+                  >
+                    <option value="true">Active</option>
+                    <option value="false">Inactive</option>
+                  </select>
+                </div>
+
+                <input type="hidden" name="customerId" value="" />
+              </div>
+
+              <div className="flex justify-end gap-3 mt-6">
+                <button
+                  type="button"
+                  onClick={() => setShowUserModal(false)}
+                  className="px-4 py-2 bg-secondary border border-gray-700 rounded-lg hover:bg-secondary-light"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="btn btn-primary"
+                >
+                  {loading ? 'Saving...' : editingUser ? 'Update User' : 'Create User'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
