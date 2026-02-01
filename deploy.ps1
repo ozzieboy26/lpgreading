@@ -6,7 +6,7 @@ cd c:\Users\reidb\qoder\lpg-tank-management
 git add .
 
 # Commit with message
-git commit -m "Fix Excel import: handle DROP PONT typo, multiple TANKSIZE columns, and enhanced column detection"
+git commit -m "Fix connection pool timeout: process Excel import in batches of 5 rows"
 
 # Push to GitHub (which will trigger Render deployment)
 git push origin main

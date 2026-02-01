@@ -155,7 +155,7 @@ export async function importCustomersFromExcel(
 
   let success = 0
   const errors: string[] = []
-  const promises: Promise<void>[] = []
+  const BATCH_SIZE = 5 // Process 5 rows at a time to avoid connection pool exhaustion
 
   // Read the header row to detect column positions
   const headerRow = worksheet.getRow(1)
@@ -215,12 +215,33 @@ export async function importCustomersFromExcel(
   // Log detected columns for debugging
   console.log('Detected columns:', columnMap)
 
-  // Process each data row
+  // Collect all row data first
+  const rowDataList: any[] = []
   worksheet.eachRow((row, rowNumber) => {
     if (rowNumber === 1) return // Skip header
+    rowDataList.push({ row, rowNumber })
+  })
 
-    const promise = (async () => {
-      try {
+  // Process rows in batches to avoid connection pool exhaustion
+  for (let i = 0; i < rowDataList.length; i += BATCH_SIZE) {
+    const batch = rowDataList.slice(i, i + BATCH_SIZE)
+    const batchPromises = batch.map(({ row, rowNumber }) => processRow(row, rowNumber, columnMap, errors))
+    
+    const results = await Promise.all(batchPromises)
+    success += results.filter(r => r === true).length
+  }
+
+  return { success, errors }
+}
+
+// Helper function to process a single row
+async function processRow(
+  row: any,
+  rowNumber: number,
+  columnMap: { [key: string]: number },
+  errors: string[]
+): Promise<boolean> {
+  try {
         // Extract data using detected column positions
         const customerName = columnMap['customerName'] ? row.getCell(columnMap['customerName']).value?.toString().trim() : undefined
         const contactName = columnMap['contactName'] ? row.getCell(columnMap['contactName']).value?.toString().trim() : undefined
@@ -265,7 +286,7 @@ export async function importCustomersFromExcel(
         // Validate required fields
         if (!dropPoint) {
           errors.push(`Row ${rowNumber}: Missing Drop Point`)
-          return
+          return false
         }
 
         // Use drop point as customer name if customer name is missing
@@ -359,17 +380,9 @@ export async function importCustomersFromExcel(
           })
         }
 
-        success++
+        return true
       } catch (error: any) {
         errors.push(`Row ${rowNumber}: ${error.message || error}`)
+        return false
       }
-    })()
-
-    promises.push(promise)
-  })
-
-  // Wait for all promises to complete
-  await Promise.all(promises)
-
-  return { success, errors }
 }
