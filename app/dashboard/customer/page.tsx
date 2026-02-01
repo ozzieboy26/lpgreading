@@ -132,7 +132,8 @@ export default function CustomerDashboard() {
       })
 
       if (!res.ok) {
-        throw new Error('Failed to submit reading')
+        const errorData = await res.json()
+        throw new Error(errorData.error || 'Failed to submit reading')
       }
 
       const data = await res.json()
@@ -152,9 +153,9 @@ export default function CustomerDashboard() {
       fetchLatestReading(selectedTank)
       
       setTimeout(() => setSuccess(false), 5000)
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error submitting reading:', error)
-      alert('Failed to submit reading. Please try again.')
+      alert(`Failed to submit reading: ${error.message || 'Please try again.'}`)
     } finally {
       setLoading(false)
     }
