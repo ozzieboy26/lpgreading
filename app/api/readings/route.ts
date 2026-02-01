@@ -78,7 +78,7 @@ export async function POST(request: NextRequest) {
         reading: reading,
         percentage: finalPercentage,
         volume: estimatedVolume,
-        submittedBy: session.user.name,
+        submittedBy: session.user.name || session.user.email || 'Unknown User',
         submittedAt: tankReading.submittedAt,
         notes: notes || '',
       })
