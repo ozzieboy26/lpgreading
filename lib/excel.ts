@@ -157,29 +157,69 @@ export async function importCustomersFromExcel(
   const errors: string[] = []
   const promises: Promise<void>[] = []
 
-  // Expected columns based on customer portal database format:
-  // Customer Name, Contact Name, Email, Phone, Address, Suburb, State, Postcode, 
-  // Drop Point, Tank Number, Capacity, Serial Number, Product, Tank Type, etc.
+  // Read the header row to detect column positions
+  const headerRow = worksheet.getRow(1)
+  const columnMap: { [key: string]: number } = {}
+  
+  headerRow.eachCell((cell, colNumber) => {
+    const headerValue = cell.value?.toString().toLowerCase().trim() || ''
+    
+    // Map various possible header names to standard field names
+    if (headerValue.includes('customer') && headerValue.includes('name')) {
+      columnMap['customerName'] = colNumber
+    } else if (headerValue.includes('contact') && headerValue.includes('name')) {
+      columnMap['contactName'] = colNumber
+    } else if (headerValue === 'email' || headerValue.includes('e-mail')) {
+      columnMap['email'] = colNumber
+    } else if (headerValue === 'phone' || headerValue.includes('telephone') || headerValue.includes('mobile')) {
+      columnMap['phone'] = colNumber
+    } else if (headerValue === 'address' || headerValue.includes('street')) {
+      columnMap['address'] = colNumber
+    } else if (headerValue === 'suburb' || headerValue.includes('city')) {
+      columnMap['suburb'] = colNumber
+    } else if (headerValue === 'state' || headerValue.includes('province')) {
+      columnMap['state'] = colNumber
+    } else if (headerValue === 'postcode' || headerValue.includes('zip') || headerValue === 'post code') {
+      columnMap['postcode'] = colNumber
+    } else if (headerValue.includes('drop') && headerValue.includes('point')) {
+      columnMap['dropPoint'] = colNumber
+    } else if (headerValue.includes('tank') && headerValue.includes('number')) {
+      columnMap['tankNumber'] = colNumber
+    } else if (headerValue.includes('capacity')) {
+      columnMap['capacity'] = colNumber
+    } else if (headerValue.includes('serial')) {
+      columnMap['serialNumber'] = colNumber
+    } else if (headerValue === 'product' || headerValue.includes('gas type')) {
+      columnMap['product'] = colNumber
+    } else if (headerValue.includes('tank') && headerValue.includes('type')) {
+      columnMap['tankType'] = colNumber
+    }
+  })
+
+  // Log detected columns for debugging
+  console.log('Detected columns:', columnMap)
+
+  // Process each data row
   worksheet.eachRow((row, rowNumber) => {
     if (rowNumber === 1) return // Skip header
 
     const promise = (async () => {
       try {
-        // Extract all customer and site data
-        const customerName = row.getCell(1).value?.toString().trim() // Customer Name
-        const contactName = row.getCell(2).value?.toString().trim() // Contact Name
-        const email = row.getCell(3).value?.toString().trim() // Email
-        const phone = row.getCell(4).value?.toString().trim() // Phone
-        const address = row.getCell(5).value?.toString().trim() // Address
-        const suburb = row.getCell(6).value?.toString().trim() // Suburb
-        const state = row.getCell(7).value?.toString().trim() // State
-        const postcode = row.getCell(8).value?.toString().trim() // Postcode
-        const dropPoint = row.getCell(9).value?.toString().trim() // Drop Point
-        const tankNumber = row.getCell(10).value?.toString().trim() // Tank Number
-        const capacity = row.getCell(11).value // Capacity
-        const serialNumber = row.getCell(12).value?.toString().trim() // Serial Number
-        const product = row.getCell(13).value?.toString().trim() || 'LPG' // Product
-        const tankType = row.getCell(14).value?.toString().trim() // Tank Type (aboveground/underground)
+        // Extract data using detected column positions
+        const customerName = columnMap['customerName'] ? row.getCell(columnMap['customerName']).value?.toString().trim() : undefined
+        const contactName = columnMap['contactName'] ? row.getCell(columnMap['contactName']).value?.toString().trim() : undefined
+        const email = columnMap['email'] ? row.getCell(columnMap['email']).value?.toString().trim() : undefined
+        const phone = columnMap['phone'] ? row.getCell(columnMap['phone']).value?.toString().trim() : undefined
+        const address = columnMap['address'] ? row.getCell(columnMap['address']).value?.toString().trim() : undefined
+        const suburb = columnMap['suburb'] ? row.getCell(columnMap['suburb']).value?.toString().trim() : undefined
+        const state = columnMap['state'] ? row.getCell(columnMap['state']).value?.toString().trim() : undefined
+        const postcode = columnMap['postcode'] ? row.getCell(columnMap['postcode']).value?.toString().trim() : undefined
+        const dropPoint = columnMap['dropPoint'] ? row.getCell(columnMap['dropPoint']).value?.toString().trim() : undefined
+        const tankNumber = columnMap['tankNumber'] ? row.getCell(columnMap['tankNumber']).value?.toString().trim() : undefined
+        const capacity = columnMap['capacity'] ? row.getCell(columnMap['capacity']).value : undefined
+        const serialNumber = columnMap['serialNumber'] ? row.getCell(columnMap['serialNumber']).value?.toString().trim() : undefined
+        const product = columnMap['product'] ? row.getCell(columnMap['product']).value?.toString().trim() : 'LPG'
+        const tankType = columnMap['tankType'] ? row.getCell(columnMap['tankType']).value?.toString().trim() : undefined
         
         // Parse capacity - handle various formats
         let tankCapacity = 0
@@ -189,25 +229,29 @@ export async function importCustomersFromExcel(
         }
 
         // Validate required fields
-        if (!customerName || !dropPoint || !address) {
-          errors.push(`Row ${rowNumber}: Missing required fields (Customer Name, Drop Point, or Address)`)
+        if (!dropPoint) {
+          errors.push(`Row ${rowNumber}: Missing Drop Point`)
           return
         }
 
+        // Use drop point as customer name if customer name is missing
+        const finalCustomerName = customerName || dropPoint
+        const finalAddress = address || `Site ${dropPoint}`
+        
         // Use contact name if provided, otherwise use customer name
-        const finalContactName = contactName || customerName
+        const finalContactName = contactName || finalCustomerName
         const finalEmail = email || `${dropPoint.toLowerCase().replace(/[^a-z0-9]/g, '')}@customer.local`
 
         // Create or update customer
         const customer = await prisma.customer.upsert({
           where: { id: finalEmail },
           update: { 
-            name: customerName, 
+            name: finalCustomerName, 
             phone: phone || '',
           },
           create: {
             id: finalEmail,
-            name: customerName,
+            name: finalCustomerName,
             email: finalEmail,
             phone: phone || '',
           },
@@ -217,7 +261,7 @@ export async function importCustomersFromExcel(
         const site = await prisma.site.upsert({
           where: { dropPointNumber: dropPoint },
           update: {
-            address,
+            address: finalAddress,
             suburb,
             state,
             postcode,
@@ -225,7 +269,7 @@ export async function importCustomersFromExcel(
           },
           create: {
             dropPointNumber: dropPoint,
-            address,
+            address: finalAddress,
             suburb,
             state,
             postcode,
@@ -244,13 +288,13 @@ export async function importCustomersFromExcel(
             },
             update: { 
               capacity: tankCapacity,
-              product: product,
+              product: product || 'LPG',
               serialNumber: serialNumber || null,
             },
             create: {
               tankNumber,
               capacity: tankCapacity,
-              product: product,
+              product: product || 'LPG',
               serialNumber: serialNumber || null,
               siteId: site.id,
             },
