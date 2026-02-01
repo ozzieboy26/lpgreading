@@ -3,6 +3,7 @@
 import { useSession } from 'next-auth/react'
 import { useState, useEffect } from 'react'
 import Navbar from '@/components/Navbar'
+import TankGauge from '@/components/TankGauge'
 import { Droplets, MapPin, Send, History, CheckCircle } from 'lucide-react'
 
 export default function CustomerDashboard() {
@@ -17,6 +18,7 @@ export default function CustomerDashboard() {
   const [notes, setNotes] = useState('')
   const [loading, setLoading] = useState(false)
   const [success, setSuccess] = useState(false)
+  const [latestReading, setLatestReading] = useState<any>(null)
 
   useEffect(() => {
     // Set current date and time as default
@@ -37,6 +39,12 @@ export default function CustomerDashboard() {
       fetchTanks(selectedSite)
     }
   }, [selectedSite])
+
+  useEffect(() => {
+    if (selectedTank) {
+      fetchLatestReading(selectedTank)
+    }
+  }, [selectedTank])
 
   const fetchSites = async () => {
     try {
@@ -69,6 +77,18 @@ export default function CustomerDashboard() {
     }
   }
 
+  const fetchLatestReading = async (tankId: string) => {
+    try {
+      const res = await fetch(`/api/readings/latest?tankId=${tankId}`)
+      if (res.ok) {
+        const data = await res.json()
+        setLatestReading(data.reading)
+      }
+    } catch (error) {
+      console.error('Failed to fetch latest reading:', error)
+    }
+  }
+
   const calculateUllage = (percentage: number, tankCapacity: number, tankType: 'aboveground' | 'underground') => {
     const currentVolume = (percentage / 100) * tankCapacity
     const targetPercentage = tankType === 'aboveground' ? 0.85 : 0.88 // 85% or 88%
@@ -83,49 +103,58 @@ export default function CustomerDashboard() {
     setSuccess(false)
 
     try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1000))
-
-      // In production, this would submit to /api/readings
       const selectedTankData = tanks.find(t => t.id === selectedTank)
       let volumeInLiters = parseFloat(reading)
       let percentageValue = 0
-      let ullageValue = 0
 
       if (readingUnit === 'percentage') {
         percentageValue = parseFloat(reading)
         volumeInLiters = (percentageValue / 100) * selectedTankData.capacity
-        ullageValue = calculateUllage(percentageValue, selectedTankData.capacity, selectedTankData.tankType)
       } else {
         // Convert liters to percentage
         percentageValue = (volumeInLiters / selectedTankData.capacity) * 100
-        ullageValue = calculateUllage(percentageValue, selectedTankData.capacity, selectedTankData.tankType)
       }
 
-      console.log('Reading submitted:', {
-        reading,
-        readingUnit,
-        volumeInLiters,
-        percentage: percentageValue,
-        ullage: ullageValue,
-        tankType: selectedTankData.tankType,
-        fillLevel: selectedTankData.tankType === 'aboveground' ? '85%' : '88%',
-        readingDate,
-        notes,
-        tankCapacity: selectedTankData.capacity
+      // Submit to API
+      const res = await fetch('/api/readings', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          tankId: selectedTank,
+          siteId: selectedSite,
+          reading: volumeInLiters,
+          percentage: percentageValue,
+          readingDate: readingDate,
+          notes: notes,
+        }),
       })
+
+      if (!res.ok) {
+        throw new Error('Failed to submit reading')
+      }
+
+      const data = await res.json()
+      
       setSuccess(true)
       setReading('')
       setNotes('')
+      
       // Reset date to current time
       const now = new Date()
       const localDateTime = new Date(now.getTime() - now.getTimezoneOffset() * 60000)
         .toISOString()
         .slice(0, 16)
       setReadingDate(localDateTime)
-      setTimeout(() => setSuccess(false), 3000)
+      
+      // Refresh the latest reading for the gauge
+      fetchLatestReading(selectedTank)
+      
+      setTimeout(() => setSuccess(false), 5000)
     } catch (error) {
       console.error('Error submitting reading:', error)
+      alert('Failed to submit reading. Please try again.')
     } finally {
       setLoading(false)
     }
@@ -303,18 +332,32 @@ export default function CustomerDashboard() {
             </form>
           </div>
 
-          {/* Recent Readings */}
+          {/* Recent Readings / Tank Gauge */}
           <div className="card">
             <div className="flex items-center space-x-2 mb-6">
               <History className="w-6 h-6 text-primary" />
-              <h2 className="text-2xl font-semibold">Recent Readings</h2>
+              <h2 className="text-2xl font-semibold">Current Tank Status</h2>
             </div>
 
-            <div className="space-y-4">
-              <p className="text-gray-400 text-center py-8">
-                No recent readings. Submit your first reading to get started!
-              </p>
-            </div>
+            {selectedTank && latestReading ? (
+              <div className="flex justify-center">
+                <TankGauge
+                  percentage={latestReading.percentage || 0}
+                  capacity={latestReading.capacity}
+                  currentVolume={latestReading.estimatedVolume || 0}
+                  tankNumber={latestReading.tankNumber}
+                  tankType={tanks.find(t => t.id === selectedTank)?.tankType || 'aboveground'}
+                />
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <p className="text-gray-400 text-center py-8">
+                  {selectedTank 
+                    ? 'No readings available for this tank yet.'
+                    : 'Select a tank to view current status.'}
+                </p>
+              </div>
+            )}
           </div>
         </div>
       </div>

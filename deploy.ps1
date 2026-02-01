@@ -6,7 +6,7 @@ cd c:\Users\reidb\qoder\lpg-tank-management
 git add .
 
 # Commit with message
-git commit -m "Add real-time stats updates and clickable dashboard cards with list pages"
+git commit -m "Implement real tank reading submission with email notifications"
 
 # Push to GitHub (which will trigger Render deployment)
 git push origin main

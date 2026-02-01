@@ -76,7 +76,7 @@ export default function CustomersListPage() {
                     <tr 
                       key={customer.id} 
                       className="border-b border-gray-800 hover:bg-secondary cursor-pointer"
-                      onClick={() => router.push(`/dashboard/tanks?customerName=${encodeURIComponent(customer.name)}`)}
+                      onClick={() => router.push(`/dashboard/admin/customer/${customer.id}`)}
                     >
                       <td className="py-3 px-4 font-semibold text-primary">{customer.name}</td>
                       <td className="py-3 px-4">{customer.email}</td>

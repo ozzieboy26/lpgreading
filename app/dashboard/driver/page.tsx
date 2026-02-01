@@ -3,11 +3,13 @@
 import { useSession } from 'next-auth/react'
 import { useState } from 'react'
 import Navbar from '@/components/Navbar'
-import { Search, Gauge, MapPin, Droplets, Battery, Signal } from 'lucide-react'
+import TankGauge from '@/components/TankGauge'
+import { Search, Gauge, MapPin, Droplets, Battery, Signal, X } from 'lucide-react'
 
 export default function DriverDashboard() {
   const { data: session } = useSession()
   const [searchTerm, setSearchTerm] = useState('')
+  const [selectedTankForGauge, setSelectedTankForGauge] = useState<any>(null)
   
   const calculateUllage = (percentage: number, capacity: number, tankType: 'aboveground' | 'underground') => {
     const currentVolume = (percentage / 100) * capacity
@@ -185,6 +187,15 @@ export default function DriverDashboard() {
                     Last updated: {new Date(data.timestamp).toLocaleString()}
                   </p>
                 </div>
+
+                {/* View Gauge Button */}
+                <button
+                  onClick={() => setSelectedTankForGauge(data)}
+                  className="w-full mt-3 btn btn-primary"
+                >
+                  <Gauge className="w-4 h-4 mr-2" />
+                  View Tank Gauge
+                </button>
               </div>
             </div>
           ))}
@@ -196,6 +207,36 @@ export default function DriverDashboard() {
             <p className="text-gray-400">
               No telemetry data found. Try a different search term.
             </p>
+          </div>
+        )}
+
+        {/* Tank Gauge Modal */}
+        {selectedTankForGauge && (
+          <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+            <div className="bg-background border border-gray-700 rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+              <div className="p-6">
+                <div className="flex justify-between items-center mb-6">
+                  <h2 className="text-2xl font-bold">
+                    {selectedTankForGauge.dropPointNumber} - Tank {selectedTankForGauge.tankNumber}
+                  </h2>
+                  <button
+                    onClick={() => setSelectedTankForGauge(null)}
+                    className="text-gray-400 hover:text-white"
+                  >
+                    <X className="w-6 h-6" />
+                  </button>
+                </div>
+                <div className="flex justify-center">
+                  <TankGauge
+                    percentage={selectedTankForGauge.percentage}
+                    capacity={selectedTankForGauge.capacity}
+                    currentVolume={selectedTankForGauge.reading}
+                    tankNumber={selectedTankForGauge.tankNumber}
+                    tankType={selectedTankForGauge.tankType}
+                  />
+                </div>
+              </div>
+            </div>
           </div>
         )}
       </div>

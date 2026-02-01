@@ -86,7 +86,7 @@ export default function UsersListPage() {
                     <tr 
                       key={user.id} 
                       className="border-b border-gray-800 hover:bg-secondary cursor-pointer"
-                      onClick={() => router.push(`/dashboard/admin`)}
+                      onClick={() => router.push(`/dashboard/admin/user/${user.id}`)}
                     >
                       <td className="py-3 px-4 font-semibold">{user.name}</td>
                       <td className="py-3 px-4">{user.email}</td>
