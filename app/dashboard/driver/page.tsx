@@ -1,7 +1,7 @@
 'use client'
 
 import { useSession } from 'next-auth/react'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Navbar from '@/components/Navbar'
 import TankGauge from '@/components/TankGauge'
 import { Search, Gauge, MapPin, Droplets, Battery, Signal, X } from 'lucide-react'
@@ -10,6 +10,58 @@ export default function DriverDashboard() {
   const { data: session } = useSession()
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedTankForGauge, setSelectedTankForGauge] = useState<any>(null)
+  const [telemetryData, setTelemetryData] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  
+  useEffect(() => {
+    loadTankData()
+  }, [])
+  
+  const loadTankData = async () => {
+    try {
+      setLoading(true)
+      // Fetch all sites with their tanks and latest readings
+      const res = await fetch('/api/sites')
+      if (res.ok) {
+        const data = await res.json()
+        
+        // Transform sites/tanks into telemetry format
+        const telemetry: any[] = []
+        
+        for (const site of data.sites) {
+          for (const tank of site.tanks || []) {
+            // Get latest reading for this tank
+            const readingRes = await fetch(`/api/readings/latest?tankId=${tank.id}`)
+            const readingData = await readingRes.json()
+            const latestReading = readingData.reading
+            
+            telemetry.push({
+              id: tank.id,
+              dropPointNumber: site.dropPointNumber,
+              address: site.address,
+              customerName: site.customer?.name || 'Unknown',
+              tankNumber: tank.tankNumber,
+              reading: latestReading?.reading || 0,
+              percentage: latestReading?.percentage || 0,
+              capacity: tank.capacity,
+              tankType: 'aboveground', // Default, should be in tank model
+              temperature: null,
+              pressure: null,
+              batteryLevel: null,
+              signalStrength: null,
+              timestamp: latestReading?.submittedAt || new Date().toISOString(),
+            })
+          }
+        }
+        
+        setTelemetryData(telemetry)
+      }
+    } catch (error) {
+      console.error('Failed to load tank data:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
   
   const calculateUllage = (percentage: number, capacity: number, tankType: 'aboveground' | 'underground') => {
     const currentVolume = (percentage / 100) * capacity
@@ -18,37 +70,6 @@ export default function DriverDashboard() {
     const ullage = targetVolume - currentVolume
     return Math.max(0, ullage)
   }
-  
-  const [telemetryData, setTelemetryData] = useState<any[]>([
-    {
-      id: '1',
-      dropPointNumber: 'DP-001',
-      tankNumber: 'T1',
-      reading: 3250,
-      percentage: 65,
-      capacity: 5000,
-      tankType: 'aboveground',
-      temperature: 22.5,
-      pressure: 8.2,
-      batteryLevel: 85,
-      signalStrength: 4,
-      timestamp: new Date().toISOString(),
-    },
-    {
-      id: '2',
-      dropPointNumber: 'DP-001',
-      tankNumber: 'T2',
-      reading: 1800,
-      percentage: 60,
-      capacity: 3000,
-      tankType: 'underground',
-      temperature: 23.1,
-      pressure: 8.5,
-      batteryLevel: 90,
-      signalStrength: 5,
-      timestamp: new Date().toISOString(),
-    },
-  ])
 
   const handleSearch = () => {
     // In production, this would call the API
@@ -98,7 +119,13 @@ export default function DriverDashboard() {
         </div>
 
         {/* Telemetry Cards */}
-        <div className="grid md:grid-cols-2 gap-6">
+        {loading ? (
+          <div className="text-center py-12">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+            <p className="text-gray-400 mt-4">Loading tank data...</p>
+          </div>
+        ) : (
+          <div className="grid md:grid-cols-2 gap-6">
           {filteredData.map((data) => (
             <div key={data.id} className="card">
               <div className="flex justify-between items-start mb-4">
@@ -200,8 +227,9 @@ export default function DriverDashboard() {
             </div>
           ))}
         </div>
+        )}
 
-        {filteredData.length === 0 && (
+        {!loading && filteredData.length === 0 && (
           <div className="card text-center py-12">
             <Gauge className="w-16 h-16 text-gray-600 mx-auto mb-4" />
             <p className="text-gray-400">

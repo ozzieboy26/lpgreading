@@ -140,3 +140,55 @@ export async function sendIndividualReadingEmail(
     `,
   })
 }
+
+interface PasswordResetData {
+  to: string
+  userName: string
+  resetUrl: string
+}
+
+export async function sendPasswordResetEmail(
+  data: PasswordResetData
+): Promise<void> {
+  await sendEmail({
+    to: data.to,
+    subject: 'Password Reset Request - LPG Tank Management',
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px;">
+        <h2 style="color: #3b82f6;">Password Reset Request</h2>
+        
+        <p>Hi ${data.userName},</p>
+        
+        <p>We received a request to reset your password for your LPG Tank Management account.</p>
+        
+        <p>Click the button below to reset your password. This link will expire in 1 hour.</p>
+        
+        <div style="text-align: center; margin: 30px 0;">
+          <a href="${data.resetUrl}" 
+             style="background-color: #3b82f6; color: white; padding: 12px 30px; 
+                    text-decoration: none; border-radius: 5px; display: inline-block;
+                    font-weight: bold;">
+            Reset Password
+          </a>
+        </div>
+        
+        <p>Or copy and paste this link into your browser:</p>
+        <p style="color: #6b7280; word-break: break-all; font-size: 12px;">
+          ${data.resetUrl}
+        </p>
+        
+        <hr style="border: 1px solid #e5e7eb; margin: 30px 0;">
+        
+        <p style="color: #6b7280; font-size: 12px;">
+          If you didn't request a password reset, you can safely ignore this email. 
+          Your password will not be changed.
+        </p>
+        
+        <p style="color: #6b7280; font-size: 12px;">
+          This is an automated email from the LPG Tank Management System.<br>
+          Do not reply to this email.
+        </p>
+      </div>
+    `,
+  })
+}
