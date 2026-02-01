@@ -2,6 +2,7 @@
 
 import { useSession } from 'next-auth/react'
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import Navbar from '@/components/Navbar'
 import { Users, Building2, Upload, Download, Settings, Droplets, X } from 'lucide-react'
 
@@ -17,6 +18,7 @@ interface User {
 
 export default function AdminDashboard() {
   const { data: session } = useSession()
+  const router = useRouter()
   const [activeTab, setActiveTab] = useState('overview')
   const [users, setUsers] = useState<User[]>([])
   const [showUserModal, setShowUserModal] = useState(false)
@@ -25,6 +27,7 @@ export default function AdminDashboard() {
   const [message, setMessage] = useState<{type: 'success' | 'error', text: string} | null>(null)
   const [emailRecipient, setEmailRecipient] = useState('vic@elgas.com.au') // Who receives the readings
   const [customers, setCustomers] = useState<any[]>([])
+  const [stats, setStats] = useState({ users: 0, customers: 0, sites: 0, readings: 0 })
   
   // Mock tank data - in production this would come from API
   const [tanks, setTanks] = useState([
@@ -37,6 +40,7 @@ export default function AdminDashboard() {
     loadUsers()
     loadSettings()
     loadCustomers()
+    loadStats()
   }, [])
 
   const loadUsers = async () => {
@@ -75,6 +79,18 @@ export default function AdminDashboard() {
     }
   }
 
+  const loadStats = async () => {
+    try {
+      const res = await fetch('/api/stats')
+      if (res.ok) {
+        const data = await res.json()
+        setStats(data)
+      }
+    } catch (error) {
+      console.error('Failed to load stats:', error)
+    }
+  }
+
   const handleTankTypeChange = (tankId: string, newType: 'aboveground' | 'underground') => {
     setTanks(tanks.map(tank => 
       tank.id === tankId ? { ...tank, tankType: newType } : tank
@@ -110,8 +126,9 @@ export default function AdminDashboard() {
             type: 'success',
             text: `Successfully imported ${data.imported} customers. ${data.errors.length > 0 ? `Errors: ${data.errors.join(', ')}` : ''}`
           })
-          // Reload users to show newly imported customers
+          // Reload users and stats to show newly imported customers
           loadUsers()
+          loadStats()
         } else {
           setMessage({ type: 'error', text: data.error || 'Failed to import file' })
         }
@@ -275,41 +292,53 @@ export default function AdminDashboard() {
 
         {/* Stats Cards */}
         <div className="grid md:grid-cols-4 gap-6 mb-8">
-          <div className="card hover:border-primary transition-colors">
+          <div 
+            onClick={() => router.push('/dashboard/admin/users')}
+            className="card hover:border-primary transition-colors cursor-pointer"
+          >
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-gray-400 text-sm">Total Users</p>
-                <p className="text-3xl font-bold">{users.length}</p>
+                <p className="text-3xl font-bold">{stats.users}</p>
               </div>
               <Users className="w-12 h-12 text-primary opacity-50" />
             </div>
           </div>
 
-          <div className="card hover:border-primary transition-colors">
+          <div 
+            onClick={() => router.push('/dashboard/admin/customers')}
+            className="card hover:border-primary transition-colors cursor-pointer"
+          >
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-gray-400 text-sm">Customers</p>
-                <p className="text-3xl font-bold">{users.filter(u => u.role === 'CUSTOMER').length}</p>
+                <p className="text-3xl font-bold">{stats.customers}</p>
               </div>
               <Building2 className="w-12 h-12 text-primary opacity-50" />
             </div>
           </div>
 
-          <div className="card hover:border-primary transition-colors">
+          <div 
+            onClick={() => router.push('/dashboard/admin/sites')}
+            className="card hover:border-primary transition-colors cursor-pointer"
+          >
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-gray-400 text-sm">Sites</p>
-                <p className="text-3xl font-bold">1</p>
+                <p className="text-3xl font-bold">{stats.sites}</p>
               </div>
               <Settings className="w-12 h-12 text-primary opacity-50" />
             </div>
           </div>
 
-          <div className="card hover:border-primary transition-colors">
+          <div 
+            onClick={() => router.push('/dashboard/admin/readings')}
+            className="card hover:border-primary transition-colors cursor-pointer"
+          >
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-gray-400 text-sm">Readings</p>
-                <p className="text-3xl font-bold">0</p>
+                <p className="text-3xl font-bold">{stats.readings}</p>
               </div>
               <Download className="w-12 h-12 text-primary opacity-50" />
             </div>
