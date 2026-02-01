@@ -24,6 +24,7 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState<{type: 'success' | 'error', text: string} | null>(null)
   const [emailRecipient, setEmailRecipient] = useState('vic@elgas.com.au') // Who receives the readings
+  const [customers, setCustomers] = useState<any[]>([])
   
   // Mock tank data - in production this would come from API
   const [tanks, setTanks] = useState([
@@ -35,6 +36,7 @@ export default function AdminDashboard() {
   useEffect(() => {
     loadUsers()
     loadSettings()
+    loadCustomers()
   }, [])
 
   const loadUsers = async () => {
@@ -58,6 +60,18 @@ export default function AdminDashboard() {
       }
     } catch (error) {
       console.error('Failed to load settings:', error)
+    }
+  }
+
+  const loadCustomers = async () => {
+    try {
+      const res = await fetch('/api/customers')
+      if (res.ok) {
+        const data = await res.json()
+        setCustomers(data.customers)
+      }
+    } catch (error) {
+      console.error('Failed to load customers:', error)
     }
   }
 
@@ -558,6 +572,27 @@ export default function AdminDashboard() {
                 </div>
 
                 <div>
+                  <label className="block text-sm font-medium mb-1">
+                    Customer (for Customer role)
+                  </label>
+                  <select
+                    name="customerId"
+                    defaultValue={editingUser?.customerId || ''}
+                    className="w-full px-3 py-2 bg-background border border-gray-700 rounded-lg focus:outline-none focus:border-primary"
+                  >
+                    <option value="">-- None --</option>
+                    {customers.map((customer) => (
+                      <option key={customer.id} value={customer.id}>
+                        {customer.name} ({customer.sites?.length || 0} sites)
+                      </option>
+                    ))}
+                  </select>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Link user to customer's sites for reading submission
+                  </p>
+                </div>
+
+                <div>
                   <label className="block text-sm font-medium mb-1">Status</label>
                   <select
                     name="active"
@@ -569,8 +604,6 @@ export default function AdminDashboard() {
                     <option value="false">Inactive</option>
                   </select>
                 </div>
-
-                <input type="hidden" name="customerId" value="" />
               </div>
 
               <div className="flex justify-end gap-3 mt-6">

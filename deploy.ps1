@@ -6,7 +6,7 @@ cd c:\Users\reidb\qoder\lpg-tank-management
 git add .
 
 # Commit with message
-git commit -m "Fix Excel import with intelligent column detection and flexible validation"
+git commit -m "Add customer site linking, multi-site support for customers, and tank management page"
 
 # Push to GitHub (which will trigger Render deployment)
 git push origin main

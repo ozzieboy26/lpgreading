@@ -26,9 +26,11 @@ export default function CustomerDashboard() {
       .slice(0, 16)
     setReadingDate(localDateTime)
     
-    // Fetch customer sites
-    fetchSites()
-  }, [])
+    // Fetch customer sites when session is available
+    if (session?.user?.customerId) {
+      fetchSites()
+    }
+  }, [session])
 
   useEffect(() => {
     if (selectedSite) {
@@ -37,22 +39,34 @@ export default function CustomerDashboard() {
   }, [selectedSite])
 
   const fetchSites = async () => {
-    // Mock data - in production this would fetch from API
-    setSites([
-      {
-        id: '1',
-        dropPointNumber: 'DP-001',
-        address: '123 Main Street, Melbourne VIC 3000',
-      },
-    ])
+    try {
+      // Fetch real sites from API based on customer's customerId
+      const customerId = session?.user?.customerId
+      if (!customerId) {
+        console.log('No customerId in session')
+        return
+      }
+
+      const res = await fetch(`/api/sites?customerId=${customerId}`)
+      if (res.ok) {
+        const data = await res.json()
+        setSites(data.sites)
+      }
+    } catch (error) {
+      console.error('Failed to fetch sites:', error)
+    }
   }
 
   const fetchTanks = async (siteId: string) => {
-    // Mock data - in production this would fetch from API
-    setTanks([
-      { id: '1', tankNumber: 'T1', capacity: 5000, tankType: 'aboveground' },
-      { id: '2', tankNumber: 'T2', capacity: 3000, tankType: 'underground' },
-    ])
+    try {
+      // Find selected site and set its tanks
+      const site = sites.find(s => s.id === siteId)
+      if (site && site.tanks) {
+        setTanks(site.tanks)
+      }
+    } catch (error) {
+      console.error('Failed to fetch tanks:', error)
+    }
   }
 
   const calculateUllage = (percentage: number, tankCapacity: number, tankType: 'aboveground' | 'underground') => {
