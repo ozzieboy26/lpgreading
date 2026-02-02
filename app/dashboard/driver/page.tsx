@@ -31,17 +31,25 @@ export default function DriverDashboard() {
   const loadTankData = async () => {
     try {
       setLoading(true)
+      console.log('Driver portal: Loading tank data...')
+      
       // Fetch all sites with their tanks and latest readings
       const res = await fetch('/api/sites')
-      if (res.ok) {
-        const data = await res.json()
-        
-        // Transform sites/tanks into telemetry format
-        const telemetry: any[] = []
-        
-        for (const site of data.sites) {
-          for (const tank of site.tanks || []) {
-            // Get latest reading for this tank
+      if (!res.ok) {
+        console.error('Failed to fetch sites:', res.status, res.statusText)
+        return
+      }
+      
+      const data = await res.json()
+      console.log('Driver portal: Loaded sites:', data.sites?.length || 0)
+      
+      // Transform sites/tanks into telemetry format
+      const telemetry: any[] = []
+      
+      for (const site of data.sites || []) {
+        for (const tank of site.tanks || []) {
+          // Get latest reading for this tank
+          try {
             const readingRes = await fetch(`/api/readings/latest?tankId=${tank.id}`)
             const readingData = await readingRes.json()
             const latestReading = readingData.reading
@@ -62,11 +70,32 @@ export default function DriverDashboard() {
               signalStrength: null,
               timestamp: latestReading?.submittedAt || new Date().toISOString(),
             })
+          } catch (readingError) {
+            console.error(`Failed to fetch reading for tank ${tank.id}:`, readingError)
+            // Still add the tank even if reading fetch fails
+            telemetry.push({
+              id: tank.id,
+              dropPointNumber: site.dropPointNumber,
+              address: site.address,
+              customerName: site.customer?.name || 'Unknown',
+              tankNumber: tank.tankNumber,
+              reading: 0,
+              percentage: 0,
+              capacity: tank.capacity,
+              tankType: 'aboveground',
+              temperature: null,
+              pressure: null,
+              batteryLevel: null,
+              signalStrength: null,
+              timestamp: new Date().toISOString(),
+            })
           }
         }
-        
-        setTelemetryData(telemetry)
       }
+      
+      console.log('Driver portal: Total tanks loaded:', telemetry.length)
+      console.log('Driver portal: Sample tank data:', telemetry[0])
+      setTelemetryData(telemetry)
     } catch (error) {
       console.error('Failed to load tank data:', error)
     } finally {
@@ -237,8 +266,20 @@ export default function DriverDashboard() {
           <div className="card text-center py-12">
             <Gauge className="w-16 h-16 text-gray-600 mx-auto mb-4" />
             <p className="text-gray-400">
-              No telemetry data found. Try a different search term.
+              {searchTerm 
+                ? `No tanks found matching "${searchTerm}". Try searching for drop point like "002257" or customer name.`
+                : telemetryData.length === 0
+                ? 'No tanks found in the system. Contact admin to import customer data.'
+                : 'No tanks match your search.'}
             </p>
+            {searchTerm && telemetryData.length > 0 && (
+              <button
+                onClick={() => setSearchTerm('')}
+                className="btn btn-primary mt-4"
+              >
+                Clear Search
+              </button>
+            )}
           </div>
         )}
 
