@@ -391,134 +391,44 @@ export default function AdminDashboard() {
           </div>
         </div>
 
-        {/* User Management */}
-        <div className="card mt-8">
-          <h2 className="text-2xl font-semibold mb-6 flex items-center gap-2">
-            <Droplets className="w-6 h-6 text-primary" />
-            Tank Management
-          </h2>
-          <p className="text-gray-400 mb-6">
+        {/* Tank Management - Clickable Card */}
+        <div 
+          onClick={() => router.push('/dashboard/admin/tanks')}
+          className="card mt-8 cursor-pointer hover:border-primary transition-colors"
+        >
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-2xl font-semibold flex items-center gap-2">
+              <Droplets className="w-6 h-6 text-primary" />
+              Tank Management
+            </h2>
+            <span className="text-primary text-sm">View All →</span>
+          </div>
+          <p className="text-gray-400 mb-4">
             Configure tank type for ullage calculations. Above ground tanks use 85% fill level, underground tanks use 88%.
           </p>
-
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-gray-800">
-                  <th className="text-left py-3 px-4">Drop Point</th>
-                  <th className="text-left py-3 px-4">Tank Number</th>
-                  <th className="text-left py-3 px-4">Capacity (L)</th>
-                  <th className="text-left py-3 px-4">Tank Type</th>
-                  <th className="text-left py-3 px-4">Fill Level</th>
-                </tr>
-              </thead>
-              <tbody>
-                {tanks.map((tank) => (
-                  <tr key={tank.id} className="border-b border-gray-800 hover:bg-secondary">
-                    <td className="py-3 px-4">{tank.dropPoint}</td>
-                    <td className="py-3 px-4">Tank {tank.tankNumber}</td>
-                    <td className="py-3 px-4">{tank.capacity}L</td>
-                    <td className="py-3 px-4">
-                      <div className="flex items-center space-x-2">
-                        <button
-                          onClick={() => handleTankTypeChange(tank.id, 'aboveground')}
-                          className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                            tank.tankType === 'aboveground'
-                              ? 'bg-primary text-white'
-                              : 'bg-secondary hover:bg-secondary-light text-gray-400'
-                          }`}
-                        >
-                          Above Ground
-                        </button>
-                        <button
-                          onClick={() => handleTankTypeChange(tank.id, 'underground')}
-                          className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                            tank.tankType === 'underground'
-                              ? 'bg-primary text-white'
-                              : 'bg-secondary hover:bg-secondary-light text-gray-400'
-                          }`}
-                        >
-                          Underground
-                        </button>
-                      </div>
-                    </td>
-                    <td className="py-3 px-4">
-                      <span className="px-3 py-1 bg-accent/20 text-accent text-sm rounded font-semibold">
-                        {tank.tankType === 'aboveground' ? '85%' : '88%'}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <p className="text-sm text-gray-500">
+            Click to manage all tanks in the system
+          </p>
         </div>
 
-        {/* User Management */}
-        <div className="card mt-8">
-          <h2 className="text-2xl font-semibold mb-6 flex items-center gap-2">
-            <Users className="w-6 h-6 text-primary" />
-            User Management
-          </h2>
-
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-gray-800">
-                  <th className="text-left py-3 px-4">Name</th>
-                  <th className="text-left py-3 px-4">Email</th>
-                  <th className="text-left py-3 px-4">Role</th>
-                  <th className="text-left py-3 px-4">Status</th>
-                  <th className="text-left py-3 px-4">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {users.map((user) => (
-                  <tr key={user.id} className="border-b border-gray-800 hover:bg-secondary">
-                    <td className="py-3 px-4">{user.name}</td>
-                    <td className="py-3 px-4">{user.email}</td>
-                    <td className="py-3 px-4">
-                      <span className={`px-2 py-1 text-xs rounded ${
-                        user.role === 'ADMIN' ? 'bg-primary/20 text-primary' :
-                        user.role === 'CUSTOMER' ? 'bg-blue-500/20 text-blue-400' :
-                        'bg-green-500/20 text-green-400'
-                      }`}>
-                        {user.role}
-                      </span>
-                    </td>
-                    <td className="py-3 px-4">
-                      <span className={`px-2 py-1 text-xs rounded ${
-                        user.active ? 'bg-accent/20 text-accent' : 'bg-red-500/20 text-red-400'
-                      }`}>
-                        {user.active ? 'Active' : 'Inactive'}
-                      </span>
-                    </td>
-                    <td className="py-3 px-4">
-                      <button 
-                        onClick={() => handleEditUser(user)}
-                        className="text-primary hover:text-primary-light mr-2"
-                      >
-                        Edit
-                      </button>
-                      <button 
-                        onClick={() => handleDeleteUser(user.id)}
-                        className="text-red-400 hover:text-red-300"
-                      >
-                        Delete
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+        {/* User Management - Clickable Card */}
+        <div 
+          onClick={() => router.push('/dashboard/admin/users')}
+          className="card mt-8 cursor-pointer hover:border-primary transition-colors"
+        >
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-2xl font-semibold flex items-center gap-2">
+              <Users className="w-6 h-6 text-primary" />
+              User Management
+            </h2>
+            <span className="text-primary text-sm">View All →</span>
           </div>
-
-          <div className="mt-6">
-            <button onClick={handleAddUser} className="btn btn-primary">
-              <Users className="w-4 h-4 mr-2" />
-              Add New User
-            </button>
-          </div>
+          <p className="text-gray-400 mb-4">
+            Manage user accounts, roles, and permissions.
+          </p>
+          <p className="text-sm text-gray-500">
+            Click to view and manage all users
+          </p>
         </div>
       </div>
 
