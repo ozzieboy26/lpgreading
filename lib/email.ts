@@ -11,6 +11,15 @@ interface EmailOptions {
 
 export async function sendEmail(options: EmailOptions): Promise<void> {
   try {
+    console.log('Attempting to send email to:', options.to)
+    console.log('SMTP Config:', {
+      host: process.env.SMTP_HOST,
+      port: process.env.SMTP_PORT,
+      secure: process.env.SMTP_PORT === '465',
+      user: process.env.SMTP_USER,
+      from: process.env.EMAIL_FROM,
+    })
+
     const transporter = nodemailer.createTransport({
       host: process.env.SMTP_HOST,
       port: parseInt(process.env.SMTP_PORT || '587'),
@@ -31,9 +40,14 @@ export async function sendEmail(options: EmailOptions): Promise<void> {
     })
 
     console.log(`Email sent successfully to ${options.to}`)
-  } catch (error) {
-    console.error('Email sending error:', error)
-    throw new Error('Failed to send email')
+  } catch (error: any) {
+    console.error('Email sending error details:', {
+      message: error.message,
+      code: error.code,
+      command: error.command,
+      response: error.response,
+    })
+    throw new Error(`Failed to send email: ${error.message}`)
   }
 }
 

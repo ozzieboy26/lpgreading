@@ -26,16 +26,31 @@ export async function POST(request: NextRequest) {
 
     console.log('Excel generated, size:', excelBuffer.length, 'bytes')
 
-    // Send email with optional custom recipient
+    // Try to send email, but don't fail if it doesn't work
     const fileName = `tank-readings-${new Date().toISOString().split('T')[0]}.xlsx`
-    await sendTankReadingEmail(excelBuffer, fileName, emailTo)
+    let emailSent = false
+    let emailError = null
+    
+    try {
+      await sendTankReadingEmail(excelBuffer, fileName, emailTo)
+      emailSent = true
+      console.log('Email sent successfully to:', emailTo || process.env.EMAIL_TO)
+    } catch (emailErr: any) {
+      emailError = emailErr.message || 'Unknown email error'
+      console.error('Failed to send email:', emailError)
+      console.error('Full email error:', emailErr)
+    }
 
-    console.log('Email sent successfully to:', emailTo || process.env.EMAIL_TO)
-
+    // Return success with download option if email failed
     return NextResponse.json({
       success: true,
-      message: 'Tank readings exported and emailed successfully',
+      emailSent,
+      emailError,
+      message: emailSent 
+        ? 'Tank readings exported and emailed successfully'
+        : 'Tank readings exported (email failed - check SMTP settings)',
       fileName,
+      downloadUrl: `/api/export/download?date=${new Date().toISOString().split('T')[0]}`,
       sentTo: emailTo || process.env.EMAIL_TO || 'vic@elgas.com.au',
     })
   } catch (error: any) {
