@@ -118,28 +118,28 @@ export default function TankGauge({
     
     // Draw labels
     ctx.fillStyle = '#000000'
-    ctx.font = 'bold 12px Arial'
+    ctx.font = 'bold 14px Arial'
     ctx.textAlign = 'center'
     
-    // Top labels
-    ctx.fillText(`ABOVE GROUND TANKS PERCENT FULL`, centerX, 30)
-    ctx.fillText(`DO NOT USE FOR FILLING`, centerX, 50)
+    // Top labels with more spacing
+    ctx.fillText(`ABOVE GROUND TANKS PERCENT FULL`, centerX, 40)
+    ctx.fillText(`DO NOT USE FOR FILLING`, centerX, 65)
     
     // Bottom label
-    ctx.font = '14px Arial'
-    ctx.fillText(`LIQUID TEMP`, centerX, canvas.height - 30)
+    ctx.font = '16px Arial'
+    ctx.fillText(`LIQUID TEMP`, centerX, canvas.height - 40)
     
   }, [percentage, tankType])
   
   return (
-    <div className="flex flex-col items-center">
+    <div className="flex flex-col items-center p-6">
       <canvas 
         ref={canvasRef} 
-        width={350} 
-        height={350}
+        width={450} 
+        height={450}
         className="border-2 border-gray-700 rounded-lg bg-white"
       />
-      <div className="mt-4 text-center space-y-2">
+      <div className="mt-6 text-center space-y-2">
         <p className="text-2xl font-bold text-primary">
           Tank {tankNumber}
         </p>
