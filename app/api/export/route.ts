@@ -16,26 +16,32 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const { startDate, endDate, emailTo } = body
 
+    console.log('Starting export for:', emailTo || process.env.EMAIL_TO || 'default recipient')
+
     // Generate Excel file
     const excelBuffer = await generateTankReadingsExcel(
       startDate ? new Date(startDate) : undefined,
       endDate ? new Date(endDate) : undefined
     )
 
+    console.log('Excel generated, size:', excelBuffer.length, 'bytes')
+
     // Send email with optional custom recipient
     const fileName = `tank-readings-${new Date().toISOString().split('T')[0]}.xlsx`
     await sendTankReadingEmail(excelBuffer, fileName, emailTo)
+
+    console.log('Email sent successfully to:', emailTo || process.env.EMAIL_TO)
 
     return NextResponse.json({
       success: true,
       message: 'Tank readings exported and emailed successfully',
       fileName,
-      sentTo: emailTo || process.env.EMAIL_TO || 'telemetry@lpgreadings.au',
+      sentTo: emailTo || process.env.EMAIL_TO || 'vic@elgas.com.au',
     })
-  } catch (error) {
-    console.error('Export error:', error)
+  } catch (error: any) {
+    console.error('Export error details:', error)
     return NextResponse.json(
-      { error: 'Failed to export tank readings' },
+      { error: error.message || 'Failed to export tank readings' },
       { status: 500 }
     )
   }
